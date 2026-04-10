@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#fdfdfc] text-slate-900 font-sans selection:bg-gold-100 selection:text-gold-900;
+    background-image:
+      radial-gradient(at 0% 0%, hsla(45, 100%, 98%, 1) 0, transparent 50%),
+      radial-gradient(at 50% 0%, hsla(47, 100%, 97%, 1) 0, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(50, 100%, 98%, 1) 0, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+.animate-entrance {
+  animation: entrance 1s ease-out forwards;
+}
+
+@keyframes entrance {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-15px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.premium-shadow {
+  box-shadow: 0 20px 50px -12px rgba(212, 175, 55, 0.15);
+}
+
+.glass-card {
+  @apply bg-white/70 backdrop-blur-xl border border-white shadow-2xl shadow-gold-500/5;
+}
+
+.gold-text-gradient {
+  background: linear-gradient(to right, #b78c2a, #d4af37, #946a22);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fdfdfc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f3e4a6;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d4af37;
+}

@@ -1,0 +1,66 @@
+[
+    {
+        "id": 1,
+        "title": "Sérum Facial CeraVe Hidratante Ácido Hialurônico",
+        "price": "98,90",
+        "image": "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=1974&auto=format&fit=crop",
+        "link": "#",
+        "category": "Skincare",
+        "tier": "budget",
+        "tags": [
+            "seca",
+            "mista"
+        ]
+    },
+    {
+        "id": 2,
+        "title": "Kit Lancôme Advanced Génifique Sérum Ativador",
+        "price": "450,00",
+        "image": "https://images.unsplash.com/photo-1617897903246-7392ce73ec7c?q=80&w=1974&auto=format&fit=crop",
+        "link": "#",
+        "category": "Skincare",
+        "tier": "performance",
+        "tags": [
+            "antienvelhecimento",
+            "all"
+        ]
+    },
+    {
+        "id": 3,
+        "title": "Protetor Solar La Roche-Posay Anthelios 60",
+        "price": "89,00",
+        "image": "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=1974&auto=format&fit=crop",
+        "link": "#",
+        "category": "Proteção",
+        "tier": "balanced",
+        "tags": [
+            "oleosa",
+            "mista"
+        ]
+    },
+    {
+        "id": 4,
+        "title": "Gel de Limpeza Bioderma Sebium",
+        "price": "75,00",
+        "image": "https://images.unsplash.com/photo-1556228578-0d85b1a4d52d?q=80&w=1974&auto=format&fit=crop",
+        "link": "#",
+        "category": "Limpeza",
+        "tier": "budget",
+        "tags": [
+            "oleosa"
+        ]
+    },
+    {
+        "id": 5,
+        "title": "Creme de Olhos Estée Lauder Advanced Night Repair",
+        "price": "380,00",
+        "image": "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?q=80&w=1974&auto=format&fit=crop",
+        "link": "#",
+        "category": "Skincare",
+        "tier": "performance",
+        "tags": [
+            "olheiras",
+            "all"
+        ]
+    }
+]
