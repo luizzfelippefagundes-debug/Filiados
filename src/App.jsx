@@ -23,16 +23,19 @@ import {
   AlertTriangle,
   Settings,
   Wifi,
-  WifiOff
+  WifiOff,
+  LayoutDashboard,
+  Trophy,
+  MousePointer2
 } from 'lucide-react';
 
 // --- COMPONENTES ---
 
-const ProductCard = ({ title, price, image, link, category }) => (
+const ProductCard = ({ title, price, image_url, image, affiliate_link, category }) => (
   <div className="bg-white/70 backdrop-blur-md border border-white rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-gold-200/50 transition-all duration-500 group flex flex-col h-full animate-entrance premium-shadow">
     <div className="relative aspect-[4/5] overflow-hidden">
       <img
-        src={image || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=400'}
+        src={image_url || image || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=400'}
         alt={title}
         className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
       />
@@ -56,15 +59,15 @@ const ProductCard = ({ title, price, image, link, category }) => (
       <div className="mt-auto">
         <div className="flex items-baseline gap-2 mb-6">
           <span className="text-2xl font-black text-slate-900 tracking-tighter italic">R$ {price}</span>
-          <span className="text-slate-400 text-[10px] line-through font-bold opacity-60 italic">R$ {(parseFloat(price) * 1.35).toFixed(2).replace('.', ',')}</span>
+          <span className="text-slate-400 text-[10px] line-through font-bold opacity-60 italic">R$ {(parseFloat(price.replace(',', '.')) * 1.35 || 0).toFixed(2).replace('.', ',')}</span>
         </div>
         <a
-          href={link}
+          href={affiliate_link}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full bg-slate-900 hover:bg-gold-500 text-white px-8 py-4 rounded-full font-black transition-all duration-500 transform active:scale-95 flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-slate-200"
+          className="w-full bg-slate-900 hover:bg-gold-500 text-white px-8 py-4 rounded-full font-black transition-all duration-500 transform active:scale-95 flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-slate-200 no-underline"
         >
-          Minha Indicação <ExternalLink size={14} />
+          Ver no Mercado Livre <ExternalLink size={14} />
         </a>
       </div>
     </div>
@@ -170,13 +173,14 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [connError, setConnError] = useState(false);
-  const [newProduct, setNewProduct] = useState({
-    title: '', price: '', image_url: '', affiliate_link: '', category: 'Geral', tier: 'balanced', tags: ''
-  });
-  const [bulkList, setBulkList] = useState('');
-  const [isBulkMode, setIsBulkMode] = useState(false);
   const [showApiConfig, setShowApiConfig] = useState(false);
   const [tempApi, setTempApi] = useState(apiUrl);
+
+  const stats = {
+    total: products.length,
+    active: products.filter(p => p.is_visible !== false).length,
+    hidden: products.filter(p => p.is_visible === false).length
+  };
 
   const ensureSchema = async () => {
     try {
@@ -187,7 +191,6 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
       });
       setConnError(false);
     } catch (e) {
-      console.error("Erro ao verificar schema:", e);
       setConnError(true);
     }
   };
@@ -205,7 +208,6 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
       setProducts(Array.isArray(list) ? list : []);
       setConnError(false);
     } catch (e) {
-      console.error(e);
       setProducts([]);
       setConnError(true);
     } finally {
@@ -222,7 +224,7 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
   const handleLogin = () => { if (password === 'gold2026') setIsAuthenticated(true); else alert('Senha Incorreta'); };
 
   const handleDelete = async (id) => {
-    if (!confirm('Excluir este item?')) return;
+    if (!confirm('Excluir permanentemente este item do banco?')) return;
     setLoading(true);
     await fetch(apiUrl, {
       method: 'POST',
@@ -241,37 +243,6 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: `UPDATE products SET is_visible = ${newStatus} WHERE id = ${id}` })
     });
-    fetchProducts();
-    onRefresh();
-  };
-
-  const handleAdd = async () => {
-    setLoading(true);
-    await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'push_product',
-        ...newProduct
-      })
-    });
-    setNewProduct({ title: '', price: '', image_url: '', affiliate_link: '', category: 'Geral', tier: 'balanced', tags: '' });
-    fetchProducts();
-    onRefresh();
-  };
-
-  const handleBulkAdd = async () => {
-    const urls = bulkList.split('\n').filter(url => url.trim().startsWith('http'));
-    if (urls.length === 0) return alert('Cole links válidos do Mercado Livre');
-    setLoading(true);
-    for (const url of urls) {
-      await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'push_product', affiliate_link: url.trim() })
-      });
-    }
-    setBulkList('');
     fetchProducts();
     onRefresh();
   };
@@ -296,34 +267,7 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
             Entrar no Painel
           </button>
           <button onClick={onClose} className="mt-6 text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] block w-full">Voltar para a Loja</button>
-
-          <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-center">
-            <button onClick={() => setShowApiConfig(true)} className="text-[9px] font-black uppercase text-slate-400 hover:text-gold-500 flex items-center gap-2 tracking-widest">
-              <Settings size={12} /> Configurar Webhook
-            </button>
-          </div>
         </div>
-
-        {showApiConfig && (
-          <div className="fixed inset-0 z-[210] bg-slate-900/80 flex items-center justify-center p-6 backdrop-blur-md">
-            <div className="bg-white p-10 rounded-3xl max-w-lg w-full shadow-2xl">
-              <h3 className="font-black text-slate-800 text-xl mb-6 uppercase italic flex items-center gap-3">
-                <Wifi className="text-gold-500" /> Webhook n8n Setup
-              </h3>
-              <p className="text-slate-400 text-[10px] font-bold uppercase mb-6 leading-relaxed">Insira o URL final (ngrok ou produção) do seu webhook do n8n para sincronizar os produtos.</p>
-              <input
-                className="w-full p-4 bg-slate-50 rounded-xl mb-6 font-bold text-xs border border-transparent focus:border-gold-300 outline-none"
-                value={tempApi}
-                onChange={e => setTempApi(e.target.value)}
-                placeholder="https://sua-url.ngrok-free.app/webhook/..."
-              />
-              <div className="flex gap-4">
-                <button onClick={() => setShowApiConfig(false)} className="flex-1 bg-slate-50 text-slate-400 p-4 rounded-xl font-black text-[10px] uppercase tracking-widest">Cancelar</button>
-                <button onClick={() => { onUpdateApi(tempApi); setShowApiConfig(false); }} className="flex-1 bg-gold-500 text-white p-4 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Salvar URL</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -331,138 +275,122 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
   return (
     <div className="fixed inset-0 z-[200] bg-slate-50 overflow-y-auto p-12 animate-entrance font-sans">
       <div className="container mx-auto">
+        {/* Header */}
         <div className="flex justify-between items-center mb-16">
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-gold-500 shadow-xl">
-              <Plus size={32} />
+              <LayoutDashboard size={32} />
             </div>
             <div>
               <h1 className="text-4xl font-black text-slate-900 uppercase italic leading-none">Gold Panel</h1>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`w-2 h-2 rounded-full ${connError ? 'bg-red-500 animate-pulse' : 'bg-emerald-500 animate-pulse'}`}></span>
                 <span className={`text-[10px] font-black uppercase tracking-widest ${connError ? 'text-red-500' : 'text-emerald-600'}`}>
-                  {connError ? 'Offline (Webhook Inválido)' : 'Sincronizado com Neon DB'}
+                  {connError ? 'Erro de Sincronização' : 'Conectado ao Neon DB'}
                 </span>
               </div>
             </div>
           </div>
           <div className="flex gap-4">
-            <button onClick={() => setShowApiConfig(true)} className="bg-white border border-gold-100 p-4 rounded-2xl hover:bg-gold-50 transition-all text-slate-400">
+            <button onClick={() => setShowApiConfig(true)} className="bg-white border border-gold-100 p-4 rounded-2xl hover:bg-gold-50 transition-all text-slate-400 shadow-sm">
               <Settings size={20} />
             </button>
-            <button onClick={onClose} className="bg-white border border-gold-100 px-6 py-4 rounded-2xl hover:bg-gold-50 transition-all flex items-center gap-3 font-black text-[10px] uppercase tracking-widest text-gold-600 shadow-sm">
+            <button onClick={onClose} className="bg-white border border-gold-100 px-8 py-4 rounded-2xl hover:bg-gold-50 transition-all flex items-center gap-3 font-black text-[10px] uppercase tracking-widest text-gold-600 shadow-sm">
               Sair do Painel <LogOut size={16} />
             </button>
           </div>
         </div>
 
-        {connError && (
-          <div className="mb-12 bg-red-50 border-2 border-red-100 p-8 rounded-[2.5rem] flex items-center gap-6 animate-bounce">
-            <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center text-red-500">
-              <WifiOff size={28} />
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {[
+            { label: 'Catálogo Total', val: stats.total, icon: ShoppingBag, color: 'slate' },
+            { label: 'Produtos Ativos', val: stats.active, icon: Eye, color: 'gold' },
+            { label: 'Itens Ocultos', val: stats.hidden, icon: EyeOff, color: 'slate' }
+          ].map((s, i) => (
+            <div key={i} className="bg-white p-8 rounded-[2rem] border border-white shadow-xl flex items-center justify-between group hover:border-gold-200 transition-all">
+              <div>
+                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] mb-2">{s.label}</p>
+                <h4 className="text-4xl font-black text-slate-900 tracking-tighter italic">{s.val}</h4>
+              </div>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${s.color === 'gold' ? 'bg-gold-500 text-white shadow-gold-200 shadow-lg' : 'bg-slate-100 text-slate-400'}`}>
+                <s.icon size={24} />
+              </div>
             </div>
-            <div className="flex-grow">
-              <h3 className="font-extrabold text-red-900 text-lg">Erro de Conexão Crítico</h3>
-              <p className="text-red-600 text-[10px] font-bold uppercase tracking-widest opacity-80 mt-1">O site não conseguiu falar com o n8n no URL: {apiUrl}</p>
-            </div>
-            <button onClick={() => setShowApiConfig(true)} className="bg-red-500 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95">Configurar Nova URL</button>
-          </div>
-        )}
+          ))}
+        </div>
 
         <div className="grid lg:grid-cols-3 gap-12">
-          {/* Formulário */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-slate-900 rounded-[2.5rem] p-8 mb-6 border border-slate-800 shadow-2xl overflow-hidden relative group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-gold-500/20 transition-all"></div>
-              <h3 className="text-white font-black uppercase italic flex items-center gap-3 mb-4 tracking-widest text-sm text-gold-500">
-                <Zap size={18} fill="currentColor" /> Gold Magic Button
-              </h3>
-              <p className="text-slate-400 text-[10px] font-bold uppercase leading-relaxed mb-6"> Arraste o botão abaixo para sua barra de favoritos. Clique nele no Mercado Livre para cadastrar na Gold Shop. </p>
-              <a
-                href={`javascript:(function(){const t=document.querySelector('.ui-pdp-title')?.innerText||document.title,p=document.querySelector('.ui-pdp-price__part .andes-money-amount__fraction')?.innerText||'',i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||'',u=window.location.href,c=prompt('Qual a categoria deste produto?', 'Geral');if(!c)return;fetch('${apiUrl}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'push_product',title:t,price:p.replace('.',''),image_url:i,affiliate_link:u,category:c})}).then(()=>alert('✅ Adicionado à Gold Shop!')).catch(()=>alert('❌ Erro de conexão'));})()`}
-                className="inline-flex items-center gap-3 bg-white text-slate-900 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gold-500 hover:text-white transition-all shadow-lg active:scale-95 cursor-move no-underline"
-                onClick={e => e.preventDefault()}
-              >
-                <Sparkles size={14} /> GOLD PUSH
-              </a>
-            </div>
+          {/* Main Collection Column */}
+          <div className="lg:col-span-1">
+            <div className="bg-slate-900 rounded-[3rem] p-10 border border-slate-800 shadow-3xl sticky top-12 overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-gold-500 rounded-3xl flex items-center justify-center text-white mb-8 shadow-2xl shadow-gold-500/20">
+                  <Zap size={32} fill="currentColor" />
+                </div>
+                <h2 className="text-white text-3xl font-black uppercase italic leading-tight mb-4 tracking-tighter">Gold Push <br /><span className="text-gold-500">Magic Button</span></h2>
+                <p className="text-slate-400 text-xs font-bold leading-relaxed mb-10 opacity-80 uppercase tracking-widest">
+                  Este é o seu único mecanismo de entrada. Arraste para a barra de favoritos e clique no Mercado Livre para cadastrar.
+                </p>
 
-            <div className="bg-white rounded-[2.5rem] p-10 border border-white shadow-xl">
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-black text-slate-800 uppercase italic flex items-center gap-3">
-                  {isBulkMode ? <Zap className="text-gold-500" /> : <Plus className="text-gold-500" />}
-                  {isBulkMode ? 'Cadastro Turbo' : 'Novo Produto'}
-                </h3>
-                <button onClick={() => setIsBulkMode(!isBulkMode)} className="text-[9px] font-black uppercase text-gold-600 border-b border-gold-200">
-                  {isBulkMode ? 'Voltar para Único' : 'Ativar Turbo'}
-                </button>
+                <div className="p-1 bg-white/5 rounded-[2rem] border border-white/10 mb-8 backdrop-blur-sm">
+                  <a
+                    href={`javascript:(function(){const t=document.querySelector('.ui-pdp-title')?.innerText||document.title;let p=document.querySelector('.ui-pdp-price__part .andes-money-amount__fraction')?.innerText||'0';p=p.replace(/\\./g,'').replace(',','.');const i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||'';const u=window.location.href;const c=prompt('Qual a categoria deste produto?', 'Geral');if(!c)return;const q="INSERT INTO products (title, price, image_url, affiliate_link, category, tier, is_visible) VALUES ('"+t.replace(/'/g,"''")+"', '"+p+"', '"+i+"', '"+u+"', '"+c+"', 'balanced', true)";fetch('${apiUrl}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})}).then(r=>r.ok?alert('✅ Adicionado!'):alert('❌ Erro no Banco')).catch(()=>alert('❌ Erro de Conexão: Verifique o n8n e a URL no painel'));})()`}
+                    className="flex items-center justify-center gap-4 bg-white text-slate-900 px-8 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-gold-500 hover:text-white transition-all shadow-xl active:scale-95 cursor-grab no-underline w-full"
+                    onClick={e => e.preventDefault()}
+                  >
+                    <MousePointer2 size={18} /> GOLD PUSH
+                  </a>
+                </div>
+
+                <div className="bg-gold-500/5 p-6 rounded-2xl border border-gold-500/10 flex items-center gap-4">
+                  <Trophy className="text-gold-500" size={24} />
+                  <span className="text-white text-[9px] font-bold uppercase tracking-[0.2em]">Curadoria Premium Ativada</span>
+                </div>
               </div>
-
-              {isBulkMode ? (
-                <div className="space-y-6">
-                  <textarea className="w-full p-6 bg-slate-50 rounded-2xl outline-none focus:ring-1 focus:ring-gold-200 font-bold text-sm min-h-[200px]" value={bulkList} onChange={e => setBulkList(e.target.value)} placeholder="https://mercadolivre.com/..." />
-                  <button onClick={handleBulkAdd} disabled={loading} className="w-full bg-gold-500 text-white p-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg hover:bg-gold-600 transition-all flex items-center justify-center gap-3 italic text-white no-underline">
-                    {loading ? <RefreshCcw className="animate-spin" /> : <><Zap fill="white" /> Processar Agora</>}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <input className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-1 focus:ring-gold-200 font-bold text-sm" value={newProduct.title} onChange={e => setNewProduct({ ...newProduct, title: e.target.value })} placeholder="Título do Produto" />
-                  <input className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-1 focus:ring-gold-200 font-bold text-sm" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} placeholder="Preço" />
-                  <input className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-1 focus:ring-gold-200 font-bold text-sm" value={newProduct.affiliate_link} onChange={e => setNewProduct({ ...newProduct, affiliate_link: e.target.value })} placeholder="Link de Afiliado" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input className="w-full p-4 bg-slate-50 rounded-xl font-bold text-sm outline-none focus:ring-1 focus:ring-gold-200" value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })} placeholder="Ex: Beleza, Casa" />
-                    <select className="p-4 bg-slate-50 rounded-xl outline-none font-bold text-sm" value={newProduct.tier} onChange={e => setNewProduct({ ...newProduct, tier: e.target.value })}>
-                      <option value="budget">Econômico</option>
-                      <option value="balanced">Equilibrado</option>
-                      <option value="performance">Premium</option>
-                    </select>
-                  </div>
-                  <button onClick={handleAdd} disabled={loading} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg hover:bg-gold-500 transition-all flex items-center justify-center gap-3 italic">
-                    {loading ? <RefreshCcw className="animate-spin" /> : 'Publicar na Loja'}
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
           {/* Listagem */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-[2.5rem] p-10 border border-white shadow-xl min-h-[600px]">
+            <div className="bg-white rounded-[3rem] p-10 border border-white shadow-xl min-h-[600px]">
               <div className="flex justify-between items-center mb-10">
-                <h3 className="text-xl font-black text-slate-800 uppercase italic flex items-center gap-3">
-                  Catálogo no Banco ({products.length})
-                  {loading && <RefreshCcw size={16} className="animate-spin text-gold-500" />}
+                <h3 className="text-2xl font-black text-slate-800 uppercase italic flex items-center gap-4">
+                  Produtos Selecionados
+                  {loading && <RefreshCcw size={18} className="animate-spin text-gold-500" />}
                 </h3>
-                <button onClick={fetchProducts} className="bg-gold-50 text-gold-600 p-3 rounded-full hover:bg-gold-100 transition-all">
-                  <RefreshCcw size={18} />
+                <button onClick={fetchProducts} className="bg-gold-50 text-gold-600 p-4 rounded-2xl hover:bg-gold-100 transition-all shadow-sm">
+                  <RefreshCcw size={20} />
                 </button>
               </div>
+
               <div className="grid gap-4">
                 {products.length === 0 && !loading && (
-                  <div className="py-32 text-center">
-                    <ShoppingBag size={48} className="mx-auto text-slate-100 mb-6" />
-                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">Nenhum produto detectado no Neon DB.</p>
-                    {connError && <p className="text-red-400 font-black text-[9px] uppercase mt-4">Verifique sua URL do Webhook nas configurações!</p>}
+                  <div className="py-32 text-center bg-slate-50/50 rounded-[2.5rem] border-2 border-dashed border-slate-100">
+                    <ShoppingBag size={48} className="mx-auto text-slate-200 mb-6" />
+                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest italic leading-relaxed">Seu catálogo está vazio.<br />Use o Gold Push no Mercado Livre para começar.</p>
                   </div>
                 )}
                 {products.map(p => (
-                  <div key={p.id} className="flex items-center gap-6 p-4 bg-slate-50 rounded-[1.5rem] group hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-gold-100">
-                    <img src={p.image_url || p.image} className="w-16 h-16 rounded-xl object-cover shadow-md" />
+                  <div key={p.id} className="flex items-center gap-6 p-5 bg-white rounded-[2rem] group hover:shadow-2xl hover:scale-[1.01] transition-all border border-slate-100 hover:border-gold-200">
+                    <img src={p.image_url || p.image} className="w-24 h-24 rounded-2xl object-cover shadow-lg border border-slate-100" />
                     <div className="flex-grow">
-                      <h4 className="font-black text-slate-800 text-xs uppercase tracking-tight line-clamp-1">{p.title}</h4>
-                      <p className="text-gold-600 font-black text-[10px] mt-1 italic uppercase tracking-widest">R$ {p.price} | {p.category}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="bg-slate-100 text-slate-500 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">{p.category}</span>
+                      </div>
+                      <h4 className="font-black text-slate-800 text-sm uppercase tracking-tight line-clamp-1">{p.title}</h4>
+                      <p className="text-gold-600 font-black text-xs mt-1 italic italic italic italic">R$ {p.price}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 pr-4">
                       <button
                         onClick={() => toggleVisibility(p.id, p.is_visible !== false)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${p.is_visible === false ? 'bg-slate-200 text-slate-400' : 'bg-gold-500 text-white shadow-lg'}`}
-                        title={p.is_visible === false ? "Oculto na Loja" : "Visível na Loja"}
+                        className={`px-6 py-3 rounded-full flex items-center gap-2 transition-all font-black text-[9px] uppercase tracking-widest ${p.is_visible === false ? 'bg-slate-100 text-slate-400 hover:bg-slate-200' : 'bg-gold-500 text-white shadow-lg shadow-gold-200'}`}
                       >
-                        {p.is_visible === false ? <EyeOff size={16} /> : <Eye size={16} />}
+                        {p.is_visible === false ? <><EyeOff size={14} /> Ativar</> : <><Eye size={14} /> Visível</>}
                       </button>
-                      <button onClick={() => handleDelete(p.id)} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all">
-                        <Trash2 size={18} />
+                      <button onClick={() => handleDelete(p.id)} className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                        <Trash2 size={20} />
                       </button>
                     </div>
                   </div>
@@ -473,22 +401,23 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
         </div>
       </div>
 
+      {/* Config Modal */}
       {showApiConfig && (
         <div className="fixed inset-0 z-[210] bg-slate-900/80 flex items-center justify-center p-6 backdrop-blur-md">
-          <div className="bg-white p-10 rounded-3xl max-w-lg w-full shadow-2xl">
-            <h3 className="font-black text-slate-800 text-xl mb-6 uppercase italic flex items-center gap-3">
-              <Wifi className="text-gold-500" /> Webhook n8n Setup
+          <div className="bg-white p-12 rounded-[3.5rem] max-w-lg w-full shadow-2xl border border-white">
+            <h3 className="font-black text-slate-800 text-2xl mb-6 uppercase italic flex items-center gap-3">
+              <Wifi className="text-gold-500" /> Webhook Setup
             </h3>
-            <p className="text-slate-400 text-[10px] font-bold uppercase mb-6 leading-relaxed">Insira o URL final (ngrok ou produção) do seu webhook do n8n para sincronizar os produtos.</p>
+            <p className="text-slate-400 text-[10px] font-bold uppercase mb-8 leading-relaxed tracking-widest">Insira o URL final do seu webhook do n8n para sincronizar os produtos.</p>
             <input
-              className="w-full p-4 bg-slate-50 rounded-xl mb-6 font-bold text-xs border border-transparent focus:border-gold-300 outline-none"
+              className="w-full p-6 bg-slate-50 rounded-2xl mb-8 font-bold text-sm border border-transparent focus:border-gold-300 outline-none"
               value={tempApi}
               onChange={e => setTempApi(e.target.value)}
               placeholder="https://sua-url.ngrok-free.app/webhook/..."
             />
             <div className="flex gap-4">
-              <button onClick={() => setShowApiConfig(false)} className="flex-1 bg-slate-50 text-slate-400 p-4 rounded-xl font-black text-[10px] uppercase tracking-widest">Cancelar</button>
-              <button onClick={() => { onUpdateApi(tempApi); setShowApiConfig(false); }} className="flex-1 bg-gold-500 text-white p-4 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Salvar URL</button>
+              <button onClick={() => setShowApiConfig(false)} className="flex-1 bg-slate-50 text-slate-400 p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest">Cancelar</button>
+              <button onClick={() => { onUpdateApi(tempApi); setShowApiConfig(false); }} className="flex-1 bg-gold-500 text-white p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Salvar URL</button>
             </div>
           </div>
         </div>
@@ -616,15 +545,15 @@ function App() {
       <main>
         {!showQuiz && !results && (
           <>
-            <header className="pt-40 container mx-auto px-6">
-              <div className="flex flex-col md:flex-row justify-between items-end gap-12 mb-16">
+            <header className="pt-40 container mx-auto px-6 text-center md:text-left">
+              <div className="flex flex-col md:flex-row justify-between items-center md:items-end gap-12 mb-16">
                 <div>
                   <h1 className="text-6xl md:text-8xl font-black text-slate-900 leading-[0.8] tracking-tighter uppercase italic py-2">
                     Meus <br /> <span className="gold-text-gradient">Achados.</span>
                   </h1>
                   <p className="mt-8 text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Curadoria exclusiva dos melhores produtos do Mercado Livre.</p>
                 </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 w-full md:w-auto">
+                <div className="flex gap-4 overflow-x-auto pb-4 w-full md:w-auto justify-center md:justify-start">
                   {categories.map(cat => (
                     <button
                       key={cat}
@@ -647,7 +576,7 @@ function App() {
                   <div className="col-span-full py-40 text-center bg-slate-50/50 rounded-[4rem] border-2 border-dashed border-slate-100">
                     <AlertTriangle size={48} className="mx-auto text-slate-200 mb-6" />
                     <p className="text-slate-400 font-black uppercase italic tracking-widest text-lg">Nenhum produto em destaque.</p>
-                    <p className="text-slate-400 text-[10px] font-bold mt-2 uppercase tracking-widest">Ative itens no seu Painel Administrativo!</p>
+                    <p className="text-slate-400 text-[10px] font-bold mt-2 uppercase tracking-widest">O administrador ainda não liberou ofertas!</p>
                   </div>
                 )}
               </div>
@@ -691,7 +620,7 @@ function App() {
             <span className="font-black text-2xl tracking-tighter text-slate-800 uppercase italic">GOLD<span className="gold-text-gradient">SHOP</span></span>
           </div>
           <p className="text-slate-300 font-black text-[9px] uppercase tracking-[0.5em] italic">
-            &copy; 2026 Gold Shop Affiliate Hub. 3-click Admin Access active.
+            &copy; 2026 Gold Shop Affiliate Hub. Curation Platform Active.
           </p>
         </div>
       </footer>
