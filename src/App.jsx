@@ -437,7 +437,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [logoClicks, setLogoClicks] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [apiUrl, setApiUrl] = useState(localStorage.getItem('gold-shop-api') || '');
+  const [apiUrl, setApiUrl] = useState(localStorage.getItem('gold-shop-api') || 'https://estate-poetry-november-browse.trycloudflare.com');
   const [apiStatus, setApiStatus] = useState('checking');
 
   // URL da API REST do Neon para configurações globais
