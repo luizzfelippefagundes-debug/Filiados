@@ -437,7 +437,41 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [logoClicks, setLogoClicks] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [apiUrl, setApiUrl] = useState(localStorage.getItem('gold-shop-api') || 'https://b724-186-224-80-83.ngrok-free.app/webhook/smartglow-api');
+  const [apiUrl, setApiUrl] = useState(localStorage.getItem('gold-shop-api') || '');
+  const [apiStatus, setApiStatus] = useState('checking');
+
+  // URL da API REST do Neon para configurações globais
+  const NEON_DB_URL = "https://ep-gentle-hall-amii66wb.apirest.c-5.us-east-1.aws.neon.tech/neondb/rest/v1";
+  const NEON_API_KEY = "napi_7ze1ed1kp2efek7hvtx2der33iw2v57trx2oc7vv1b5j0goybgjwqlk1h40adlu0";
+
+  // Buscar URL da API automaticamente no Banco Neon na inicialização
+  useEffect(() => {
+    const autoSyncApi = async () => {
+      try {
+        const response = await fetch(NEON_DB_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${NEON_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ query: "SELECT value FROM settings WHERE key = 'api_webhook_url' LIMIT 1" })
+        });
+        const data = await response.json();
+        // O Neon REST API costuma retornar { rows: [...] } ou direto o array
+        const rows = data.rows || data;
+        if (rows && rows[0] && rows[0].value) {
+          console.log("🔗 API Auto-detectada do Banco:", rows[0].value);
+          if (rows[0].value !== apiUrl) {
+            setApiUrl(rows[0].value);
+            localStorage.setItem('gold-shop-api', rows[0].value);
+          }
+        }
+      } catch (err) {
+        console.warn("⚠️ Falha na sincronização automática da API:", err);
+      }
+    };
+    autoSyncApi();
+  }, []);
 
   const updateApi = (newUrl) => {
     localStorage.setItem('gold-shop-api', newUrl);

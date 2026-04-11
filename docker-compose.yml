@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n_gold_shop
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=https://ecommerce-tropical-accurately-keep.trycloudflare.com/
+      - NODE_ENV=production
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare_gold_shop
+    restart: always
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiOTc0ZDU5NTExNTE4MGYxMzcwZjhmNjM2ZTFiNTA0OTYiLCJ0IjoiZmJhMjk2NzAtZGM5YS00YzA3LTgzOTktYmI2NjhlNGE3ODg5IiwicyI6IllUQm1NVGxoTlRNdFlXRmhOUzAwWW1Fd0xUbGtOakF0WTJSa01XSTRObU16WkdReSJ9
+    command: tunnel run
+    depends_on:
+      - n8n
+
+volumes:
+  n8n_data:
