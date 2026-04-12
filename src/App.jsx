@@ -167,10 +167,9 @@ const Quiz = ({ onComplete }) => {
   );
 };
 
-const NEON_SQL = "https://ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/sql";
-const NEON_CS = "postgresql://neondb_owner:npg_lWzA8uLghEU0@ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require";
+const NEON_SQL = "https://filiados.vercel.app/api/query";
 const neon = async (q) => {
-  const r = await fetch(NEON_SQL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Neon-Connection-String': NEON_CS }, body: JSON.stringify({ query: q }) });
+  const r = await fetch(NEON_SQL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) });
   if (!r.ok) throw new Error('DB error');
   return r.json();
 };
@@ -314,7 +313,7 @@ const AdminPanel = ({ onClose, onRefresh }) => {
 
                 <div className="p-1 bg-white/5 rounded-[2rem] border border-white/10 mb-8 backdrop-blur-sm">
                   <a
-                    href={`javascript:(function(){const t=document.querySelector('.ui-pdp-title')?.innerText||document.title;let p=document.querySelector('.ui-pdp-price__part .andes-money-amount__fraction')?.innerText||'0';p=p.replace(/\\./g,'').replace(',','.');const i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||'';const u=window.location.href;const c=prompt('Qual a categoria?','Skincare');if(!c)return;const q="INSERT INTO products (title, price, image_url, affiliate_link, category, tier, is_visible) VALUES ('"+t.replace(/'/g,"''")+"', '"+p+"', '"+i+"', '"+u+"', '"+c+"', 'balanced', true)";fetch('https://ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/sql',{method:'POST',headers:{'Content-Type':'application/json','Neon-Connection-String':'postgresql://neondb_owner:npg_lWzA8uLghEU0@ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require'},body:JSON.stringify({query:q})}).then(r=>r.ok?alert('✅ Produto adicionado ao Gold Shop!'):alert('❌ Erro')).catch(()=>alert('❌ Erro de Conexão'));})()`}
+                    href={`javascript:(function(){const t=document.querySelector('.ui-pdp-title')?.innerText||document.title;let p=document.querySelector('.ui-pdp-price__part .andes-money-amount__fraction')?.innerText||'0';p=p.replace(/\\./g,'').replace(',','.');const i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||'';const u=window.location.href;const c=prompt('Qual a categoria?','Skincare');if(!c)return;const q="INSERT INTO products (title, price, image_url, affiliate_link, category, tier, is_visible) VALUES ('"+t.replace(/'/g,"''")+"', '"+p+"', '"+i+"', '"+u+"', '"+c+"', 'balanced', true)";fetch('https://filiados.vercel.app/api/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})}).then(r=>r.ok?alert('✅ Produto adicionado ao Gold Shop!'):alert('❌ Erro')).catch(()=>alert('❌ Erro de Conexão'));})()`}
                     className="flex items-center justify-center gap-4 bg-white text-slate-900 px-8 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-gold-500 hover:text-white transition-all shadow-xl active:scale-95 cursor-grab no-underline w-full"
                     onClick={e => e.preventDefault()}
                   >
@@ -380,27 +379,29 @@ const AdminPanel = ({ onClose, onRefresh }) => {
       </div>
 
       {/* Config Modal */}
-      {showApiConfig && (
-        <div className="fixed inset-0 z-[210] bg-slate-900/80 flex items-center justify-center p-6 backdrop-blur-md">
-          <div className="bg-white p-12 rounded-[3.5rem] max-w-lg w-full shadow-2xl border border-white">
-            <h3 className="font-black text-slate-800 text-2xl mb-6 uppercase italic flex items-center gap-3">
-              <Wifi className="text-gold-500" /> Webhook Setup
-            </h3>
-            <p className="text-slate-400 text-[10px] font-bold uppercase mb-8 leading-relaxed tracking-widest">Insira o URL final do seu webhook do n8n para sincronizar os produtos.</p>
-            <input
-              className="w-full p-6 bg-slate-50 rounded-2xl mb-8 font-bold text-sm border border-transparent focus:border-gold-300 outline-none"
-              value={tempApi}
-              onChange={e => setTempApi(e.target.value)}
-              placeholder="https://sua-url.ngrok-free.app/webhook/..."
-            />
-            <div className="flex gap-4">
-              <button onClick={() => setShowApiConfig(false)} className="flex-1 bg-slate-50 text-slate-400 p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest">Cancelar</button>
-              <button onClick={() => { onUpdateApi(tempApi); setShowApiConfig(false); }} className="flex-1 bg-gold-500 text-white p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Salvar URL</button>
+      {
+        showApiConfig && (
+          <div className="fixed inset-0 z-[210] bg-slate-900/80 flex items-center justify-center p-6 backdrop-blur-md">
+            <div className="bg-white p-12 rounded-[3.5rem] max-w-lg w-full shadow-2xl border border-white">
+              <h3 className="font-black text-slate-800 text-2xl mb-6 uppercase italic flex items-center gap-3">
+                <Wifi className="text-gold-500" /> Webhook Setup
+              </h3>
+              <p className="text-slate-400 text-[10px] font-bold uppercase mb-8 leading-relaxed tracking-widest">Insira o URL final do seu webhook do n8n para sincronizar os produtos.</p>
+              <input
+                className="w-full p-6 bg-slate-50 rounded-2xl mb-8 font-bold text-sm border border-transparent focus:border-gold-300 outline-none"
+                value={tempApi}
+                onChange={e => setTempApi(e.target.value)}
+                placeholder="https://sua-url.ngrok-free.app/webhook/..."
+              />
+              <div className="flex gap-4">
+                <button onClick={() => setShowApiConfig(false)} className="flex-1 bg-slate-50 text-slate-400 p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest">Cancelar</button>
+                <button onClick={() => { onUpdateApi(tempApi); setShowApiConfig(false); }} className="flex-1 bg-gold-500 text-white p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Salvar URL</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 
@@ -417,17 +418,12 @@ function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [apiStatus, setApiStatus] = useState('checking');
 
-  // Conexão DIRETA ao Neon (sem n8n, sem túnel)
-  const NEON_SQL_URL = "https://ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/sql";
-  const NEON_CONN = "postgresql://neondb_owner:npg_lWzA8uLghEU0@ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require";
+  const NEON_SQL_URL = "/api/query";
 
   const neonQuery = async (query) => {
     const response = await fetch(NEON_SQL_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Neon-Connection-String': NEON_CONN
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query })
     });
     if (!response.ok) throw new Error('Neon query failed');
