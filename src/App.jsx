@@ -167,14 +167,21 @@ const Quiz = ({ onComplete }) => {
   );
 };
 
-const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
+const NEON_SQL = "https://ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/sql";
+const NEON_CS = "postgresql://neondb_owner:npg_lWzA8uLghEU0@ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require";
+const neon = async (q) => {
+  const r = await fetch(NEON_SQL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Neon-Connection-String': NEON_CS }, body: JSON.stringify({ query: q }) });
+  if (!r.ok) throw new Error('DB error');
+  return r.json();
+};
+
+const AdminPanel = ({ onClose, onRefresh }) => {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [connError, setConnError] = useState(false);
   const [showApiConfig, setShowApiConfig] = useState(false);
-  const [tempApi, setTempApi] = useState(apiUrl);
 
   const stats = {
     total: products.length,
@@ -182,30 +189,11 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
     hidden: products.filter(p => p.is_visible === false).length
   };
 
-  const ensureSchema = async () => {
-    try {
-      await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_visible BOOLEAN DEFAULT TRUE;" })
-      });
-      setConnError(false);
-    } catch (e) {
-      setConnError(true);
-    }
-  };
-
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: "SELECT * FROM products ORDER BY id DESC" })
-      });
-      const data = await res.json();
-      const list = data.rows || data;
-      setProducts(Array.isArray(list) ? list : []);
+      const data = await neon("SELECT * FROM products ORDER BY id DESC");
+      setProducts(Array.isArray(data.rows) ? data.rows : []);
       setConnError(false);
     } catch (e) {
       setProducts([]);
@@ -216,21 +204,15 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      ensureSchema().then(fetchProducts);
-    }
-  }, [isAuthenticated, apiUrl]);
+    if (isAuthenticated) fetchProducts();
+  }, [isAuthenticated]);
 
   const handleLogin = () => { if (password === 'gold2026') setIsAuthenticated(true); else alert('Senha Incorreta'); };
 
   const handleDelete = async (id) => {
     if (!confirm('Excluir permanentemente este item do banco?')) return;
     setLoading(true);
-    await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: `DELETE FROM products WHERE id = ${id}` })
-    });
+    await neon(`DELETE FROM products WHERE id = ${id}`);
     fetchProducts();
     onRefresh();
   };
@@ -238,11 +220,7 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
   const toggleVisibility = async (id, currentStatus) => {
     setLoading(true);
     const newStatus = !currentStatus;
-    await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: `UPDATE products SET is_visible = ${newStatus} WHERE id = ${id}` })
-    });
+    await neon(`UPDATE products SET is_visible = ${newStatus} WHERE id = ${id}`);
     fetchProducts();
     onRefresh();
   };
@@ -336,7 +314,7 @@ const AdminPanel = ({ onClose, onRefresh, apiUrl, onUpdateApi }) => {
 
                 <div className="p-1 bg-white/5 rounded-[2rem] border border-white/10 mb-8 backdrop-blur-sm">
                   <a
-                    href={`javascript:(function(){const t=document.querySelector('.ui-pdp-title')?.innerText||document.title;let p=document.querySelector('.ui-pdp-price__part .andes-money-amount__fraction')?.innerText||'0';p=p.replace(/\\./g,'').replace(',','.');const i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||'';const u=window.location.href;const c=prompt('Qual a categoria deste produto?', 'Geral');if(!c)return;const q="INSERT INTO products (title, price, image_url, affiliate_link, category, tier, is_visible) VALUES ('"+t.replace(/'/g,"''")+"', '"+p+"', '"+i+"', '"+u+"', '"+c+"', 'balanced', true)";fetch('${apiUrl}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})}).then(r=>r.ok?alert('✅ Adicionado!'):alert('❌ Erro no Banco')).catch(()=>alert('❌ Erro de Conexão: Verifique o n8n e a URL no painel'));})()`}
+                    href={`javascript:(function(){const t=document.querySelector('.ui-pdp-title')?.innerText||document.title;let p=document.querySelector('.ui-pdp-price__part .andes-money-amount__fraction')?.innerText||'0';p=p.replace(/\\./g,'').replace(',','.');const i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||'';const u=window.location.href;const c=prompt('Qual a categoria?','Skincare');if(!c)return;const q="INSERT INTO products (title, price, image_url, affiliate_link, category, tier, is_visible) VALUES ('"+t.replace(/'/g,"''")+"', '"+p+"', '"+i+"', '"+u+"', '"+c+"', 'balanced', true)";fetch('https://ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/sql',{method:'POST',headers:{'Content-Type':'application/json','Neon-Connection-String':'postgresql://neondb_owner:npg_lWzA8uLghEU0@ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require'},body:JSON.stringify({query:q})}).then(r=>r.ok?alert('✅ Produto adicionado ao Gold Shop!'):alert('❌ Erro')).catch(()=>alert('❌ Erro de Conexão'));})()`}
                     className="flex items-center justify-center gap-4 bg-white text-slate-900 px-8 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-gold-500 hover:text-white transition-all shadow-xl active:scale-95 cursor-grab no-underline w-full"
                     onClick={e => e.preventDefault()}
                   >
@@ -437,67 +415,41 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [logoClicks, setLogoClicks] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [apiUrl, setApiUrl] = useState(localStorage.getItem('gold-shop-api') || 'https://estate-poetry-november-browse.trycloudflare.com/webhook/smartglow-api');
   const [apiStatus, setApiStatus] = useState('checking');
 
-  // URL da API REST do Neon para configurações globais
-  const NEON_DB_URL = "https://ep-gentle-hall-amii66wb.apirest.c-5.us-east-1.aws.neon.tech/neondb/rest/v1";
-  const NEON_API_KEY = "napi_7ze1ed1kp2efek7hvtx2der33iw2v57trx2oc7vv1b5j0goybgjwqlk1h40adlu0";
+  // Conexão DIRETA ao Neon (sem n8n, sem túnel)
+  const NEON_SQL_URL = "https://ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/sql";
+  const NEON_CONN = "postgresql://neondb_owner:npg_lWzA8uLghEU0@ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require";
 
-  // Buscar URL da API automaticamente no Banco Neon na inicialização
-  useEffect(() => {
-    const autoSyncApi = async () => {
-      try {
-        const response = await fetch(NEON_DB_URL, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${NEON_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ query: "SELECT value FROM settings WHERE key = 'api_webhook_url' LIMIT 1" })
-        });
-        const data = await response.json();
-        // O Neon REST API costuma retornar { rows: [...] } ou direto o array
-        const rows = data.rows || data;
-        if (rows && rows[0] && rows[0].value) {
-          console.log("🔗 API Auto-detectada do Banco:", rows[0].value);
-          if (rows[0].value !== apiUrl) {
-            setApiUrl(rows[0].value);
-            localStorage.setItem('gold-shop-api', rows[0].value);
-          }
-        }
-      } catch (err) {
-        console.warn("⚠️ Falha na sincronização automática da API:", err);
-      }
-    };
-    autoSyncApi();
-  }, []);
-
-  const updateApi = (newUrl) => {
-    localStorage.setItem('gold-shop-api', newUrl);
-    setApiUrl(newUrl);
-    window.location.reload();
+  const neonQuery = async (query) => {
+    const response = await fetch(NEON_SQL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Neon-Connection-String': NEON_CONN
+      },
+      body: JSON.stringify({ query })
+    });
+    if (!response.ok) throw new Error('Neon query failed');
+    return response.json();
   };
 
   const loadData = () => {
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: "SELECT * FROM products ORDER BY id DESC" })
-    })
-      .then(res => res.json())
+    neonQuery("SELECT * FROM products ORDER BY id DESC")
       .then(data => {
-        const productsList = data.rows || data;
+        const productsList = data.rows || [];
         setProducts(Array.isArray(productsList) ? productsList : []);
+        setApiStatus('connected');
         setIsLoading(false);
       })
       .catch((err) => {
         console.error("Erro ao buscar do Neon:", err);
+        setApiStatus('error');
         fetch('/products.json').then(res => res.json()).then(data => setProducts(data)).finally(() => setIsLoading(false));
       });
   };
 
-  useEffect(() => { loadData(); }, [apiUrl]);
+  useEffect(() => { loadData(); }, []);
 
   const handleLogoClick = () => {
     const newCount = logoClicks + 1;
@@ -543,7 +495,7 @@ function App() {
   return (
     <div className="min-h-screen bg-[#fdfdfc] overflow-x-hidden selection:bg-gold-100 selection:text-gold-900 font-sans">
 
-      {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} onRefresh={loadData} apiUrl={apiUrl} onUpdateApi={updateApi} />}
+      {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} onRefresh={loadData} />}
 
       {/* Navbar Gold */}
       <nav className="fixed w-full z-[100] bg-white/70 backdrop-blur-xl border-b border-gold-100/50">
