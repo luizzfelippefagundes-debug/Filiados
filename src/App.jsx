@@ -1,375 +1,344 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Sparkles,
-  Heart,
-  ExternalLink,
-  ChevronRight,
-  ChevronLeft,
-  ShoppingBag,
-  CheckCircle2,
-  ArrowRight,
-  Star,
-  Share2,
-  Zap,
-  Lock,
-  Plus,
-  Trash2,
-  LogOut,
-  RefreshCcw,
-  Search,
-  Filter,
-  Eye,
-  EyeOff,
-  AlertTriangle,
-  Settings,
-  Wifi,
-  WifiOff,
-  LayoutDashboard,
-  Trophy,
-  MousePointer2
+  Sparkles, Star, ExternalLink, ShieldCheck, ArrowDown,
+  Heart, Truck, BadgeCheck, Check, ShoppingBag,
+  Zap, Lock, LogOut, RefreshCcw, Search,
+  LayoutDashboard, MousePointer2, RefreshCw, X, Globe, Play, MessageCircle
 } from 'lucide-react';
 
-// --- COMPONENTES ---
+// === DB QUERY ===
+const neonQuery = async (q) => {
+  const r = await fetch("/api/query", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) });
+  return r.json();
+};
 
-const ProductCard = ({ title, price, image_url, image, affiliate_link, category }) => (
-  <div className="bg-white/70 backdrop-blur-md border border-white rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-gold-200/50 transition-all duration-500 group flex flex-col h-full animate-entrance premium-shadow">
-    <div className="relative aspect-[4/5] overflow-hidden">
-      <img
-        src={image_url || image || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=400'}
-        alt={title}
-        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-      />
-      <div className="absolute top-4 left-4">
-        <span className="bg-slate-900/90 backdrop-blur-sm text-gold-400 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-sm border border-gold-900/20">
-          {category}
+// === HERO ===
+const Hero = ({ productCount }) => (
+  <header className="relative overflow-hidden bg-gradient-hero text-white">
+    <div className="pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-secondary/40 blur-3xl animate-float" />
+    <div className="pointer-events-none absolute right-0 top-32 h-80 w-80 rounded-full bg-accent/40 blur-3xl animate-float" style={{ animationDelay: '1.2s' }} />
+    <div className="pointer-events-none absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-gold/30 blur-3xl animate-float" style={{ animationDelay: '0.6s' }} />
+
+    <div className="container relative z-10 flex flex-col items-center py-20 text-center md:py-28">
+      <div className="mb-6 flex items-center gap-3 animate-fade-in-up">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-gold shadow-gold">
+          <Sparkles className="h-6 w-6 text-gold-foreground" strokeWidth={2.5} />
+        </div>
+        <span className="text-2xl font-extrabold tracking-tight">
+          Gold <span className="text-gradient-gold">Shop</span>
         </span>
       </div>
-      <button className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-slate-400 hover:text-gold-500 transition-all shadow-lg overflow-hidden group/heart">
-        <Heart className="group-hover/heart:fill-gold-500 transition-all" size={20} />
-      </button>
-    </div>
-    <div className="p-7 flex flex-col flex-grow bg-gradient-to-b from-transparent to-gold-50/10">
-      <h3 className="font-bold text-slate-800 text-lg mb-3 leading-tight group-hover:text-gold-600 transition-colors uppercase tracking-tight line-clamp-2">{title}</h3>
 
-      <div className="flex items-center gap-1 mb-4">
-        {[1, 2, 3, 4, 5].map(i => <Star key={i} size={12} className="fill-gold-400 text-gold-400" />)}
-        <span className="text-[10px] text-slate-400 font-bold ml-1 uppercase tracking-tight">(4.9)</span>
+      <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <ShieldCheck className="h-4 w-4 text-gold" />
+        Curadoria 100% testada e aprovada
       </div>
 
-      <div className="mt-auto">
-        <div className="flex items-baseline gap-2 mb-6">
-          <span className="text-2xl font-black text-slate-900 tracking-tighter italic">R$ {price}</span>
-          <span className="text-slate-400 text-[10px] line-through font-bold opacity-60 italic">R$ {(parseFloat(price.replace(',', '.')) * 1.35 || 0).toFixed(2).replace('.', ',')}</span>
-        </div>
-        <a
-          href={affiliate_link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full bg-slate-900 hover:bg-gold-500 text-white px-8 py-4 rounded-full font-black transition-all duration-500 transform active:scale-95 flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-slate-200 no-underline"
-        >
-          Ver no Mercado Livre <ExternalLink size={14} />
+      <h1 className="mb-5 max-w-4xl text-balance text-4xl font-extrabold leading-tight tracking-tight md:text-6xl animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+        Garimpamos as melhores ofertas{' '}
+        <span className="text-gradient-gold">do Mercado Livre</span> pra você
+      </h1>
+
+      <p className="mb-10 max-w-2xl text-balance text-base text-white/80 md:text-lg animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+        Selecionamos produtos com o melhor custo-benefício, testados de verdade. Você compra
+        direto no Mercado Livre, com toda segurança da plataforma.
+      </p>
+
+      <div className="flex flex-col items-center gap-3 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+        <a href="#vitrine" className="inline-flex items-center gap-2 bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold transition-smooth h-12 px-8 text-base font-bold rounded-lg no-underline">
+          Ver vitrine <ArrowDown className="h-4 w-4" />
         </a>
+        <p className="text-xs text-white/60">{productCount} produtos selecionados esta semana</p>
       </div>
+    </div>
+
+    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-background" />
+  </header>
+);
+
+// === CATEGORY FILTER ===
+const CategoryFilter = ({ categories, active, onChange, count }) => (
+  <div className="space-y-4">
+    <div className="flex items-baseline justify-between gap-4">
+      <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
+        Vitrine <span className="text-gradient-brand">curada</span>
+      </h2>
+      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'produto' : 'produtos'}</span>
+    </div>
+    <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+      {['Todos', ...categories].map(cat => (
+        <button key={cat} onClick={() => onChange(cat)}
+          className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-smooth ${active === cat
+            ? 'border-transparent bg-gradient-brand text-white shadow-card-hover'
+            : 'border-border bg-card text-foreground hover:border-primary/40 hover:text-primary'
+            }`}>
+          {cat}
+        </button>
+      ))}
     </div>
   </div>
 );
 
-const Quiz = ({ onComplete }) => {
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState({});
+// === PRODUCT CARD ===
+const ProductCard = ({ product, onClick }) => {
+  const price = parseFloat(product.price?.toString().replace(',', '.') || 0);
+  const originalPrice = price * 1.35;
+  const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
 
-  const steps = [
-    {
-      title: "Como você sente sua pele hoje?",
-      field: 'type',
-      options: [
-        { label: "Mais Oleosa", value: "oleosa", icon: "💧", desc: "Com alguns pontos de brilho" },
-        { label: "Mais Seca", value: "seca", icon: "🌵", desc: "Sinto que está sem viço" },
-        { label: "Mista", value: "mista", icon: "🌓", desc: "Brilho apenas na zona T" },
-        { label: "Sensível", value: "sensivel", icon: "🌸", desc: "Irrita-se com facilidade" }
-      ]
-    },
-    {
-      title: "Qual seu sonho para sua pele?",
-      field: 'goal',
-      options: [
-        { label: "Rejuvenescer", value: "antienvelhecimento", icon: "⏳", desc: "Suavizar linhas e rugas" },
-        { label: "Pele de Porcelana", value: "acne", icon: "✨", desc: "Sem manchas e poros limpos" },
-        { label: "Hidratação Máxima", value: "hidratacao", icon: "🌊", desc: "Sempre macia e renovada" },
-        { label: "Brilho Natural", value: "brilho", icon: "💡", desc: "Iluminada de dentro pra fora" }
-      ]
-    },
-    {
-      title: "Quanto gostaria de investir?",
-      field: 'budget',
-      options: [
-        { label: "Produtos Essenciais", value: "budget", icon: "🏷️", desc: "Melhores achados acessíveis" },
-        { label: "Kit Equilibrado", value: "balanced", icon: "💎", desc: "O melhor custo-benefício" },
-        { label: "Luxo Tecnológico", value: "performance", icon: "👑", desc: "Tecnologia de ponta mundial" }
-      ]
-    }
-  ];
-
-  const handleSelect = (value) => {
-    const newAnswers = { ...answers, [steps[step].field]: value };
-    setAnswers(newAnswers);
-    if (step < steps.length - 1) {
-      setStep(step + 1);
-    } else {
-      onComplete(newAnswers);
-    }
-  };
+  const formatBRL = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
-    <div className="max-w-xl mx-auto py-16 px-10 bg-white rounded-[3rem] shadow-2xl shadow-gold-200/40 border border-white animate-entrance">
-      <div className="flex justify-between items-center mb-16">
-        <div className="flex gap-1.5">
-          {steps.map((_, i) => (
-            <div key={i} className={`h-1.5 w-10 rounded-full transition-all duration-700 ${i <= step ? 'bg-gold-500' : 'bg-gold-100'}`} />
-          ))}
+    <article onClick={onClick}
+      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-smooth hover:-translate-y-1 hover:border-gold/50 hover:shadow-glow">
+      <div className="relative aspect-square overflow-hidden bg-muted">
+        <img src={product.image_url || product.image} alt={product.title} loading="lazy"
+          className="h-full w-full object-cover transition-smooth group-hover:scale-105" />
+        <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-gradient-gold px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gold-foreground shadow-gold">
+          <Sparkles className="h-3 w-3" strokeWidth={2.5} /> Curadoria Gold
         </div>
-        <span className="text-[9px] font-black text-gold-400 uppercase tracking-[0.3em]">Advisor Passo 0{step + 1}</span>
+        {discount > 0 && (
+          <div className="absolute right-3 top-3 rounded-full bg-gradient-brand px-2.5 py-1 text-xs font-bold text-white shadow-card">
+            -{discount}%
+          </div>
+        )}
       </div>
-
-      <h2 className="text-4xl font-black text-slate-800 mb-4 leading-tight tracking-tight italic">
-        {steps[step].title}
-      </h2>
-      <p className="text-slate-400 mb-12 text-xs uppercase tracking-[0.2em] font-bold opacity-80">Consultoria Premium de Beleza</p>
-
-      <div className="grid gap-5">
-        {steps[step].options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => handleSelect(opt.value)}
-            className="flex items-center gap-6 p-7 bg-white border border-gold-50 rounded-[2rem] hover:border-gold-300 hover:bg-gold-50/20 hover:shadow-xl hover:shadow-gold-100/50 transition-all duration-500 text-left group cursor-pointer"
-          >
-            <div className="w-16 h-16 bg-gold-50 rounded-2xl flex items-center justify-center text-4xl group-hover:bg-gold-100 group-hover:rotate-6 transition-all duration-500 shadow-sm border border-white">
-              {opt.icon}
-            </div>
-            <div>
-              <span className="block font-black text-slate-800 text-lg group-hover:text-gold-600 transition-colors uppercase tracking-tight">{opt.label}</span>
-              <span className="text-slate-400 text-[10px] uppercase tracking-widest font-bold opacity-70">{opt.desc}</span>
-            </div>
-            <ArrowRight size={20} className="ml-auto text-gold-200 group-hover:text-gold-500 group-hover:translate-x-1 transition-all" />
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <span className="w-fit rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          {product.category}
+        </span>
+        <h3 className="line-clamp-2 min-h-[2.75rem] text-sm font-semibold leading-snug text-foreground">
+          {product.title}
+        </h3>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Star className="h-3.5 w-3.5 fill-gold text-gold" />
+          <span className="font-semibold text-foreground">4.8</span>
+          <span>(curadoria)</span>
+        </div>
+        <div className="mt-auto space-y-2">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-extrabold text-foreground">{formatBRL(price)}</span>
+            <span className="text-sm text-muted-foreground line-through">{formatBRL(originalPrice)}</span>
+          </div>
+          <button className="w-full rounded-lg bg-gradient-brand py-2.5 text-sm font-semibold text-white transition-smooth hover:opacity-90"
+            onClick={e => { e.stopPropagation(); onClick(); }}>
+            Ver detalhes
           </button>
-        ))}
+        </div>
       </div>
+    </article>
+  );
+};
 
-      {step > 0 && (
-        <button
-          onClick={() => setStep(step - 1)}
-          className="mt-12 flex items-center gap-2 text-gold-400 hover:text-gold-600 font-black text-[9px] uppercase tracking-[0.4em] transition-all"
-        >
-          <ChevronLeft size={16} /> Voltar
+// === PRODUCT MODAL ===
+const ProductModal = ({ product, onClose }) => {
+  if (!product) return null;
+  const price = parseFloat(product.price?.toString().replace(',', '.') || 0);
+  const originalPrice = price * 1.35;
+  const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+  const formatBRL = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in-up" onClick={onClose}>
+      <div className="relative max-h-[92vh] max-w-5xl w-full overflow-y-auto rounded-2xl bg-card shadow-2xl" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute right-4 top-4 z-20 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-smooth">
+          <X size={16} />
         </button>
-      )}
+
+        <div className="grid gap-0 md:grid-cols-2">
+          {/* Gallery */}
+          <div className="relative bg-muted p-4 md:p-6">
+            <div className="absolute left-6 top-6 z-10 flex items-center gap-1 rounded-full bg-gradient-gold px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gold-foreground shadow-gold">
+              <Sparkles className="h-3 w-3" strokeWidth={2.5} /> Curadoria Gold
+            </div>
+            <div className="aspect-square overflow-hidden rounded-xl bg-card">
+              <img src={product.image_url || product.image} alt={product.title} className="h-full w-full object-cover" />
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="flex flex-col gap-4 p-6 md:p-8">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">{product.category}</span>
+            </div>
+
+            <h2 className="text-xl font-bold leading-tight md:text-2xl">{product.title}</h2>
+
+            <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map(i => <Star key={i} className="h-4 w-4 fill-gold text-gold" />)}
+              </div>
+              <span className="font-semibold">4.8</span>
+              <span className="text-muted-foreground">(curadoria Gold)</span>
+            </div>
+
+            {/* Price */}
+            <div className="rounded-xl border border-border bg-muted/40 p-4">
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-extrabold text-foreground md:text-4xl">{formatBRL(price)}</span>
+                {discount > 0 && (
+                  <span className="rounded-full bg-gradient-brand px-2 py-0.5 text-xs font-bold text-white">-{discount}%</span>
+                )}
+              </div>
+              <span className="text-sm text-muted-foreground line-through">de {formatBRL(originalPrice)}</span>
+            </div>
+
+            {/* Trust badges */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-card p-2.5 text-center">
+                <Truck className="h-4 w-4 text-primary" />
+                <span className="text-[11px] font-medium leading-tight">Frete rápido</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-card p-2.5 text-center">
+                <ShieldCheck className="h-4 w-4 text-secondary" />
+                <span className="text-[11px] font-medium leading-tight">Compra segura ML</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-card p-2.5 text-center">
+                <BadgeCheck className="h-4 w-4 text-accent" />
+                <span className="text-[11px] font-medium leading-tight">Vendedor verificado</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {product.description || 'Produto selecionado pela curadoria Gold Shop por sua qualidade e custo-benefício.'}
+            </p>
+
+            {/* Curator note */}
+            <div className="rounded-xl border border-gold/30 bg-gold-soft/60 p-4">
+              <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gold-foreground">
+                <Heart className="h-3.5 w-3.5 fill-current" /> Por que recomendamos
+              </div>
+              <p className="text-sm leading-relaxed text-gold-foreground/90">
+                Produto garimpado pela curadoria Gold Shop. Avaliamos preço, qualidade, reputação do vendedor e satisfação dos compradores.
+              </p>
+            </div>
+
+            {/* CTA */}
+            <div className="mt-2 space-y-2">
+              <a href={product.affiliate_link} target="_blank" rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-gold py-3.5 text-base font-bold text-gold-foreground shadow-gold transition-smooth hover:opacity-90 no-underline">
+                Comprar no Mercado Livre <ExternalLink className="h-4 w-4" />
+              </a>
+              <p className="text-center text-[11px] text-muted-foreground">
+                Link de afiliado — você paga o mesmo preço e ajuda a manter a curadoria 💛
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-const NEON_SQL = "https://filiados.vercel.app/api/query";
-const neon = async (q) => {
-  const r = await fetch(NEON_SQL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) });
-  if (!r.ok) throw new Error('DB error');
-  return r.json();
-};
-
-const AdminPanel = ({ onClose, onRefresh }) => {
-  const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [connError, setConnError] = useState(false);
-  const [showApiConfig, setShowApiConfig] = useState(false);
-
-  const stats = {
-    total: products.length,
-    active: products.filter(p => p.is_visible !== false).length,
-    hidden: products.filter(p => p.is_visible === false).length
-  };
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const data = await neon("SELECT * FROM products ORDER BY id DESC");
-      setProducts(Array.isArray(data.rows) ? data.rows : []);
-      setConnError(false);
-    } catch (e) {
-      setProducts([]);
-      setConnError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated) fetchProducts();
-  }, [isAuthenticated]);
-
-  const handleLogin = () => { if (password === 'gold2026') setIsAuthenticated(true); else alert('Senha Incorreta'); };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Excluir permanentemente este item do banco?')) return;
-    setLoading(true);
-    await neon(`DELETE FROM products WHERE id = ${id}`);
-    fetchProducts();
-    onRefresh();
-  };
-
-  const toggleVisibility = async (id, currentStatus) => {
-    setLoading(true);
-    const newStatus = !currentStatus;
-    await neon(`UPDATE products SET is_visible = ${newStatus} WHERE id = ${id}`);
-    fetchProducts();
-    onRefresh();
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="fixed inset-0 z-[200] bg-slate-900/95 flex items-center justify-center p-6 backdrop-blur-xl">
-        <div className="bg-white rounded-[3rem] p-12 max-w-md w-full shadow-3xl text-center border border-white">
-          <div className="w-20 h-20 bg-gold-500 rounded-3xl flex items-center justify-center text-white mx-auto mb-10 shadow-xl shadow-gold-200 text-white">
-            <Lock size={40} />
+// === FOOTER ===
+const Footer = () => (
+  <footer className="mt-20 border-t border-border bg-muted/40">
+    <div className="container py-10">
+      <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+        <div className="max-w-md">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-gold shadow-gold">
+              <Sparkles className="h-4 w-4 text-gold-foreground" strokeWidth={2.5} />
+            </div>
+            <span className="text-lg font-extrabold tracking-tight">
+              Gold <span className="text-gradient-gold">Shop</span>
+            </span>
           </div>
-          <h2 className="text-3xl font-black text-slate-800 mb-4 uppercase italic">Admin Access</h2>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-10">Gold Shop Management</p>
-          <input
-            type="password"
-            className="w-full p-6 bg-slate-50 rounded-2xl mb-6 outline-none focus:ring-2 focus:ring-gold-500 font-bold text-center text-2xl"
-            placeholder="••••••"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-          />
-          <button onClick={handleLogin} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-widest hover:bg-gold-500 transition-all shadow-xl">
-            Entrar no Painel
-          </button>
-          <button onClick={onClose} className="mt-6 text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] block w-full">Voltar para a Loja</button>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Curadoria independente de produtos do Mercado Livre. Garimpamos só o que vale a pena
+            de verdade, testado e aprovado.
+          </p>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 z-[200] bg-slate-50 overflow-y-auto p-12 animate-entrance font-sans">
-      <div className="container mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-16">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-gold-500 shadow-xl">
-              <LayoutDashboard size={32} />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black text-slate-900 uppercase italic leading-none">Gold Panel</h1>
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`w-2 h-2 rounded-full ${connError ? 'bg-red-500 animate-pulse' : 'bg-emerald-500 animate-pulse'}`}></span>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${connError ? 'text-red-500' : 'text-emerald-600'}`}>
-                  {connError ? 'Erro de Sincronização' : 'Conectado ao Neon DB'}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <button onClick={() => setShowApiConfig(true)} className="bg-white border border-gold-100 p-4 rounded-2xl hover:bg-gold-50 transition-all text-slate-400 shadow-sm">
-              <Settings size={20} />
-            </button>
-            <button onClick={onClose} className="bg-white border border-gold-100 px-8 py-4 rounded-2xl hover:bg-gold-50 transition-all flex items-center gap-3 font-black text-[10px] uppercase tracking-widest text-gold-600 shadow-sm">
-              Sair do Painel <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {[
-            { label: 'Catálogo Total', val: stats.total, icon: ShoppingBag, color: 'slate' },
-            { label: 'Produtos Ativos', val: stats.active, icon: Eye, color: 'gold' },
-            { label: 'Itens Ocultos', val: stats.hidden, icon: EyeOff, color: 'slate' }
-          ].map((s, i) => (
-            <div key={i} className="bg-white p-8 rounded-[2rem] border border-white shadow-xl flex items-center justify-between group hover:border-gold-200 transition-all">
-              <div>
-                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] mb-2">{s.label}</p>
-                <h4 className="text-4xl font-black text-slate-900 tracking-tighter italic">{s.val}</h4>
-              </div>
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${s.color === 'gold' ? 'bg-gold-500 text-white shadow-gold-200 shadow-lg' : 'bg-slate-100 text-slate-400'}`}>
-                <s.icon size={24} />
-              </div>
-            </div>
+        <div className="flex gap-2">
+          {[Globe, Play, MessageCircle].map((Icon, i) => (
+            <a key={i} href="#" className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground transition-smooth hover:border-primary hover:text-primary">
+              <Icon className="h-4 w-4" />
+            </a>
           ))}
         </div>
+      </div>
+      <div className="mt-8 flex flex-col items-start justify-between gap-2 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
+        <p>© {new Date().getFullYear()} Gold Shop — Todos os direitos reservados.</p>
+        <p>Os links da vitrine são de afiliado. Ganhamos uma pequena comissão sem custo extra para você.</p>
+      </div>
+    </div>
+  </footer>
+);
 
-        <div className="grid lg:grid-cols-3 gap-12">
-          {/* Main Collection Column */}
-          <div className="lg:col-span-1">
-            <div className="bg-slate-900 rounded-[3rem] p-10 border border-slate-800 shadow-3xl sticky top-12 overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gold-500 rounded-3xl flex items-center justify-center text-white mb-8 shadow-2xl shadow-gold-500/20">
-                  <Zap size={32} fill="currentColor" />
-                </div>
-                <h2 className="text-white text-3xl font-black uppercase italic leading-tight mb-4 tracking-tighter">Gold Push <br /><span className="text-gold-500">Magic Button</span></h2>
-                <p className="text-slate-400 text-xs font-bold leading-relaxed mb-10 opacity-80 uppercase tracking-widest">
-                  Este é o seu único mecanismo de entrada. Arraste para a barra de favoritos e clique no Mercado Livre para cadastrar.
-                </p>
+// === ADMIN PANEL ===
+const AdminPanel = ({ onClose, onRefresh }) => {
+  const [pw, setPw] = useState('');
+  const [auth, setAuth] = useState(false);
+  const [items, setItems] = useState([]);
+  const [link, setLink] = useState('');
+  const [busy, setBusy] = useState(false);
 
-                <div className="p-1 bg-white/5 rounded-[2rem] border border-white/10 mb-8 backdrop-blur-sm">
-                  <a
-                    href={`javascript:(function(){const t=document.querySelector('.ui-pdp-title')?.innerText||document.title;let p=document.querySelector('.ui-pdp-price__part .andes-money-amount__fraction')?.innerText||'0';p=p.replace(/\\./g,'').replace(',','.');const i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||'';const u=window.location.href;const c=prompt('Qual a categoria?','Skincare');if(!c)return;const q="INSERT INTO products (title, price, image_url, affiliate_link, category, tier, is_visible) VALUES ('"+t.replace(/'/g,"''")+"', '"+p+"', '"+i+"', '"+u+"', '"+c+"', 'balanced', true)";fetch('https://filiados.vercel.app/api/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})}).then(r=>r.ok?alert('✅ Produto adicionado ao Gold Shop!'):alert('❌ Erro')).catch(()=>alert('❌ Erro de Conexão'));})()`}
-                    className="flex items-center justify-center gap-4 bg-white text-slate-900 px-8 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-gold-500 hover:text-white transition-all shadow-xl active:scale-95 cursor-grab no-underline w-full"
-                    onClick={e => e.preventDefault()}
-                  >
-                    <MousePointer2 size={18} /> GOLD PUSH
-                  </a>
-                </div>
+  const load = async () => { const d = await neonQuery("SELECT * FROM products ORDER BY id DESC"); setItems(d.rows || []); };
+  useEffect(() => { if (auth) load(); }, [auth]);
 
-                <div className="bg-gold-500/5 p-6 rounded-2xl border border-gold-500/10 flex items-center gap-4">
-                  <Trophy className="text-gold-500" size={24} />
-                  <span className="text-white text-[9px] font-bold uppercase tracking-[0.2em]">Curadoria Premium Ativada</span>
-                </div>
-              </div>
+  if (!auth) return (
+    <div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-6 backdrop-blur-xl">
+      <div className="bg-card rounded-2xl p-10 max-w-sm w-full shadow-2xl text-center">
+        <div className="w-16 h-16 bg-gradient-gold rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-gold">
+          <Lock size={32} className="text-gold-foreground" />
+        </div>
+        <h2 className="text-2xl font-extrabold mb-2">Admin Access</h2>
+        <p className="text-muted-foreground text-xs font-medium mb-8">Gold Shop Panel</p>
+        <input type="password" className="w-full p-4 bg-muted rounded-xl mb-4 outline-none text-center text-xl border border-border focus:border-primary transition-smooth" placeholder="••••••" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { pw === 'gold2026' ? setAuth(true) : alert('Incorreta'); } }} />
+        <button onClick={() => { pw === 'gold2026' ? setAuth(true) : alert('Incorreta'); }} className="w-full bg-gradient-brand text-white py-4 rounded-xl font-bold text-sm transition-smooth hover:opacity-90">Entrar</button>
+        <button onClick={onClose} className="mt-4 text-muted-foreground text-xs font-medium block w-full">Cancelar</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-background overflow-y-auto p-8 animate-fade-in-up">
+      <div className="container">
+        <div className="flex justify-between items-center mb-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-brand rounded-xl flex items-center justify-center text-white shadow-card"><LayoutDashboard size={24} /></div>
+            <div>
+              <h1 className="text-2xl font-extrabold">Gold Panel</h1>
+              <span className="text-emerald-600 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />Conectado</span>
             </div>
           </div>
+          <button onClick={onClose} className="border border-border bg-card px-6 py-3 rounded-xl text-foreground text-xs font-semibold transition-smooth hover:border-primary flex items-center gap-2"><LogOut size={14} /> Sair</button>
+        </div>
 
-          {/* Listagem */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="space-y-6">
+            <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
+              <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2"><Zap size={16} className="text-gold" /> Capturar Produto</h3>
+              <input className="w-full p-3.5 bg-muted rounded-xl mb-3 text-sm outline-none border border-border focus:border-primary transition-smooth" placeholder="🔗 Link do Mercado Livre" value={link} onChange={e => setLink(e.target.value)} />
+              <button onClick={async () => { if (!link.trim()) return; setBusy(true); try { await fetch(`/bot/capture?url=${encodeURIComponent(link)}`); setLink(''); setTimeout(() => { load(); onRefresh(); }, 2000); } catch { } finally { setBusy(false); } }} disabled={busy} className="w-full bg-gradient-gold text-gold-foreground py-3 rounded-xl font-bold text-xs transition-smooth hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 shadow-gold">
+                {busy ? <RefreshCcw size={14} className="animate-spin" /> : <Zap size={14} />} {busy ? 'Capturando...' : 'Capturar & Postar'}
+              </button>
+            </div>
+            <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
+              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2"><MousePointer2 size={16} className="text-gold" /> Gold Push</h3>
+              <a href="javascript:(function(){ var url = encodeURIComponent(window.location.href); var server = 'http://localhost:3333'; window.open(server + '/capture?format=html&url=' + url, 'GoldPush', 'width=500,height=400'); })();" className="inline-block bg-gradient-gold text-gold-foreground px-5 py-2.5 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-gold hover:opacity-90 transition-smooth no-underline">🚀 Arraste para Favoritos</a>
+            </div>
+            <div className="bg-card rounded-2xl p-6 border border-border shadow-card text-center">
+              <button onClick={async () => { try { await fetch('http://localhost:3333/run-automation', { method: 'POST' }); alert('🔄 Sincronização iniciada!'); } catch { } }} className="w-full p-3 bg-gold-soft border border-gold/20 rounded-xl text-gold-foreground font-bold text-xs transition-smooth hover:bg-gold-soft/80 flex items-center justify-center gap-2">
+                <RefreshCw size={14} /> Sincronizar Catálogo
+              </button>
+            </div>
+          </div>
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-[3rem] p-10 border border-white shadow-xl min-h-[600px]">
-              <div className="flex justify-between items-center mb-10">
-                <h3 className="text-2xl font-black text-slate-800 uppercase italic flex items-center gap-4">
-                  Produtos Selecionados
-                  {loading && <RefreshCcw size={18} className="animate-spin text-gold-500" />}
-                </h3>
-                <button onClick={fetchProducts} className="bg-gold-50 text-gold-600 p-4 rounded-2xl hover:bg-gold-100 transition-all shadow-sm">
-                  <RefreshCcw size={20} />
-                </button>
+            <div className="bg-card rounded-2xl p-6 border border-border shadow-card min-h-[500px]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-sm font-bold flex items-center gap-3">Catálogo <span className="text-gold text-xs">{items.length}</span></h3>
+                <button onClick={load} className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-smooth"><RefreshCcw size={16} /></button>
               </div>
-
-              <div className="grid gap-4">
-                {products.length === 0 && !loading && (
-                  <div className="py-32 text-center bg-slate-50/50 rounded-[2.5rem] border-2 border-dashed border-slate-100">
-                    <ShoppingBag size={48} className="mx-auto text-slate-200 mb-6" />
-                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest italic leading-relaxed">Seu catálogo está vazio.<br />Use o Gold Push no Mercado Livre para começar.</p>
-                  </div>
-                )}
-                {products.map(p => (
-                  <div key={p.id} className="flex items-center gap-6 p-5 bg-white rounded-[2rem] group hover:shadow-2xl hover:scale-[1.01] transition-all border border-slate-100 hover:border-gold-200">
-                    <img src={p.image_url || p.image} className="w-24 h-24 rounded-2xl object-cover shadow-lg border border-slate-100" />
-                    <div className="flex-grow">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="bg-slate-100 text-slate-500 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">{p.category}</span>
-                      </div>
-                      <h4 className="font-black text-slate-800 text-sm uppercase tracking-tight line-clamp-1">{p.title}</h4>
-                      <p className="text-gold-600 font-black text-xs mt-1 italic italic italic italic">R$ {p.price}</p>
+              <div className="space-y-3">
+                {items.map(p => (
+                  <div key={p.id} className="flex items-center gap-4 p-3 rounded-xl border border-border bg-card hover:border-gold/30 transition-smooth group">
+                    <img src={p.image_url || p.image} className="w-14 h-14 rounded-lg object-cover" alt="" />
+                    <div className="flex-grow min-w-0">
+                      <h4 className="font-semibold text-foreground text-xs truncate">{p.title}</h4>
+                      <p className="text-gold font-bold text-xs">R$ {p.price}</p>
                     </div>
-                    <div className="flex items-center gap-3 pr-4">
-                      <button
-                        onClick={() => toggleVisibility(p.id, p.is_visible !== false)}
-                        className={`px-6 py-3 rounded-full flex items-center gap-2 transition-all font-black text-[9px] uppercase tracking-widest ${p.is_visible === false ? 'bg-slate-100 text-slate-400 hover:bg-slate-200' : 'bg-gold-500 text-white shadow-lg shadow-gold-200'}`}
-                      >
-                        {p.is_visible === false ? <><EyeOff size={14} /> Ativar</> : <><Eye size={14} /> Visível</>}
-                      </button>
-                      <button onClick={() => handleDelete(p.id)} className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all">
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
+                    <span className="text-xs text-muted-foreground">{p.category}</span>
                   </div>
                 ))}
               </div>
@@ -377,235 +346,92 @@ const AdminPanel = ({ onClose, onRefresh }) => {
           </div>
         </div>
       </div>
-
-      {/* Config Modal */}
-      {
-        showApiConfig && (
-          <div className="fixed inset-0 z-[210] bg-slate-900/80 flex items-center justify-center p-6 backdrop-blur-md">
-            <div className="bg-white p-12 rounded-[3.5rem] max-w-lg w-full shadow-2xl border border-white">
-              <h3 className="font-black text-slate-800 text-2xl mb-6 uppercase italic flex items-center gap-3">
-                <Wifi className="text-gold-500" /> Webhook Setup
-              </h3>
-              <p className="text-slate-400 text-[10px] font-bold uppercase mb-8 leading-relaxed tracking-widest">Insira o URL final do seu webhook do n8n para sincronizar os produtos.</p>
-              <input
-                className="w-full p-6 bg-slate-50 rounded-2xl mb-8 font-bold text-sm border border-transparent focus:border-gold-300 outline-none"
-                value={tempApi}
-                onChange={e => setTempApi(e.target.value)}
-                placeholder="https://sua-url.ngrok-free.app/webhook/..."
-              />
-              <div className="flex gap-4">
-                <button onClick={() => setShowApiConfig(false)} className="flex-1 bg-slate-50 text-slate-400 p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest">Cancelar</button>
-                <button onClick={() => { onUpdateApi(tempApi); setShowApiConfig(false); }} className="flex-1 bg-gold-500 text-white p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Salvar URL</button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-    </div >
+    </div>
   );
 };
 
-// --- APP PRINCIPAL ---
-
+// === APP ===
 function App() {
   const [products, setProducts] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('Tudo');
+  const [activeCategory, setActiveCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [results, setResults] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [logoClicks, setLogoClicks] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [apiStatus, setApiStatus] = useState('checking');
-
-  const NEON_SQL_URL = "/api/query";
-
-  const neonQuery = async (query) => {
-    const response = await fetch(NEON_SQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
-    });
-    if (!response.ok) throw new Error('Neon query failed');
-    return response.json();
-  };
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const loadData = () => {
     neonQuery("SELECT * FROM products ORDER BY id DESC")
-      .then(data => {
-        const productsList = data.rows || [];
-        setProducts(Array.isArray(productsList) ? productsList : []);
-        setApiStatus('connected');
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar do Neon:", err);
-        setApiStatus('error');
-        fetch('/products.json').then(res => res.json()).then(data => setProducts(data)).finally(() => setIsLoading(false));
-      });
+      .then(data => { setProducts(data.rows || []); setIsLoading(false); })
+      .catch(() => setIsLoading(false));
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); const i = setInterval(loadData, 30000); return () => clearInterval(i); }, []);
+
+  const visible = products.filter(p => p.is_visible !== false);
+  const categories = [...new Set(visible.map(p => p.category))];
+
+  const filtered = useMemo(() =>
+    visible.filter(p =>
+      (activeCategory === 'Todos' || p.category === activeCategory) &&
+      p.title.toLowerCase().includes(searchQuery.toLowerCase())
+    ), [visible, activeCategory, searchQuery]);
 
   const handleLogoClick = () => {
-    const newCount = logoClicks + 1;
-    setLogoClicks(newCount);
-    if (newCount === 3) { setShowAdmin(true); setLogoClicks(0); }
-    setTimeout(() => setLogoClicks(0), 3000);
+    const n = logoClicks + 1;
+    if (n === 3) { setShowAdmin(true); setLogoClicks(0); }
+    else { setLogoClicks(n); setTimeout(() => setLogoClicks(0), 3000); }
   };
 
-  const handleQuizComplete = (answers) => {
-    setResults(answers);
-    setShowQuiz(false);
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      const el = document.getElementById('results');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }, 1200);
-  };
+  const handleSelect = (p) => { setSelectedProduct(p); setModalOpen(true); };
 
-  const filteredProducts = products.filter(p => {
-    if (p.is_visible === false) return false;
-    const matchesCategory = selectedCategory === 'Tudo' || p.category === selectedCategory;
-    const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesQuiz = results
-      ? (p.tier === results.budget || (p.tags && p.tags.includes(results.type)))
-      : true;
-    return matchesCategory && matchesSearch && matchesQuiz;
-  });
-
-  const categories = ['Tudo', ...new Set(products.filter(p => p.is_visible !== false).map(p => p.category))];
-
-  if (isLoading && !showQuiz && !results) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center">
-        <div className="w-20 h-20 bg-gold-500 rounded-full flex items-center justify-center animate-bounce shadow-2xl shadow-gold-500/50 text-white">
-          <ShoppingBag size={32} />
-        </div>
-        <p className="mt-8 text-gold-500 font-black text-xs uppercase tracking-[0.5em] animate-pulse">Iniciando Gold Shop...</p>
+  if (isLoading) return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+      <div className="w-16 h-16 bg-gradient-gold rounded-2xl flex items-center justify-center shadow-gold animate-float">
+        <Sparkles size={28} className="text-gold-foreground" />
       </div>
-    );
-  }
+      <p className="mt-6 text-gold font-bold text-xs animate-pulse">Carregando curadoria...</p>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#fdfdfc] overflow-x-hidden selection:bg-gold-100 selection:text-gold-900 font-sans">
-
+    <div className="min-h-screen bg-background">
       {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} onRefresh={loadData} />}
+      {modalOpen && <ProductModal product={selectedProduct} onClose={() => setModalOpen(false)} />}
 
-      {/* Navbar Gold */}
-      <nav className="fixed w-full z-[100] bg-white/70 backdrop-blur-xl border-b border-gold-100/50">
-        <div className="container mx-auto px-6 h-24 flex items-center justify-between gap-8">
-          <div onClick={handleLogoClick} className="flex items-center gap-3 cursor-pointer group active:scale-95 transition-all">
-            <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-gold-500 shadow-lg group-hover:rotate-12 group-hover:bg-gold-500 group-hover:text-white transition-all">
-              <ShoppingBag size={20} />
-            </div>
-            <span className="font-black text-2xl tracking-tighter text-slate-900 uppercase italic leading-none">
-              GOLD<span className="gold-text-gradient">SHOP</span>
-            </span>
-          </div>
+      {/* Click logo 3x = admin */}
+      <div onClick={handleLogoClick} className="fixed top-5 left-6 z-[120] cursor-pointer" />
 
-          <div className="hidden md:flex flex-grow max-w-xl relative">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              className="w-full bg-slate-100/50 border border-transparent focus:border-gold-300 focus:bg-white p-4 pl-14 rounded-2xl outline-none font-bold text-sm transition-all shadow-inner"
-              placeholder="O que você está procurando?"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
+      <Hero productCount={visible.length} />
 
-          <button
-            onClick={() => { setResults(null); setShowQuiz(true); }}
-            className="flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gold-500 transition-all shadow-xl shadow-slate-200"
-          >
-            Beauty Advisor <Sparkles size={14} className="text-gold-400" />
-          </button>
+      <main id="vitrine" className="container scroll-mt-8 py-12 md:py-16">
+        {/* Search */}
+        <div className="mb-8 relative max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+          <input className="w-full bg-card border border-border rounded-xl p-3 pl-11 text-sm outline-none focus:border-primary transition-smooth shadow-card" placeholder="Buscar produtos..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
         </div>
-      </nav>
 
-      <main>
-        {!showQuiz && !results && (
-          <>
-            <header className="pt-40 container mx-auto px-6 text-center md:text-left">
-              <div className="flex flex-col md:flex-row justify-between items-center md:items-end gap-12 mb-16">
-                <div>
-                  <h1 className="text-6xl md:text-8xl font-black text-slate-900 leading-[0.8] tracking-tighter uppercase italic py-2">
-                    Meus <br /> <span className="gold-text-gradient">Achados.</span>
-                  </h1>
-                  <p className="mt-8 text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Curadoria exclusiva dos melhores produtos do Mercado Livre.</p>
-                </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 w-full md:w-auto justify-center md:justify-start">
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap shadow-sm border ${selectedCategory === cat
-                        ? 'bg-slate-900 text-gold-400 border-slate-900 shadow-xl'
-                        : 'bg-white text-slate-400 border-slate-100 hover:border-gold-200'
-                        }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        <CategoryFilter categories={categories} active={activeCategory} onChange={setActiveCategory} count={filtered.length} />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-32">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map(p => <ProductCard key={p.id} {...p} />)
-                ) : (
-                  <div className="col-span-full py-40 text-center bg-slate-50/50 rounded-[4rem] border-2 border-dashed border-slate-100">
-                    <AlertTriangle size={48} className="mx-auto text-slate-200 mb-6" />
-                    <p className="text-slate-400 font-black uppercase italic tracking-widest text-lg">Nenhum produto em destaque.</p>
-                    <p className="text-slate-400 text-[10px] font-bold mt-2 uppercase tracking-widest">O administrador ainda não liberou ofertas!</p>
-                  </div>
-                )}
-              </div>
-            </header>
-          </>
-        )}
-
-        {showQuiz && (
-          <section className="pt-48 pb-32 flex items-center justify-center px-6">
-            <Quiz onComplete={handleQuizComplete} />
-          </section>
-        )}
-
-        {results && !showQuiz && !isLoading && (
-          <section id="results" className="pt-40 pb-48 px-6 animate-entrance">
-            <div className="container mx-auto">
-              <div className="flex justify-between items-end mb-16">
-                <h2 className="text-5xl md:text-7xl font-black text-slate-900 italic tracking-tighter uppercase">Advisor <br /> <span className="gold-text-gradient">Results.</span></h2>
-                <button onClick={() => setResults(null)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b-2 border-slate-100 pb-2 hover:text-gold-600 hover:border-gold-500 transition-all">Limpar Filtros</button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-                {filteredProducts.map(p => <ProductCard key={p.id} {...p} />)}
-              </div>
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((product, i) => (
+            <div key={product.id} className="animate-fade-in-up" style={{ animationDelay: `${i * 60}ms` }}>
+              <ProductCard product={product} onClick={() => handleSelect(product)} />
             </div>
-          </section>
-        )}
+          ))}
+        </div>
 
-        {isLoading && results && (
-          <div className="min-h-screen flex flex-col items-center justify-center pt-24">
-            <Sparkles className="text-gold-500 animate-spin" size={64} />
-            <p className="mt-8 text-slate-800 font-black uppercase tracking-widest italic">Personalizando seu Gold Advisor...</p>
+        {filtered.length === 0 && (
+          <div className="mt-16 text-center text-muted-foreground py-20">
+            <ShoppingBag size={48} className="mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-semibold">Nenhum produto nesta categoria ainda.</p>
+            <p className="text-sm">Volte em breve! ✨</p>
           </div>
         )}
       </main>
 
-      <footer className="py-24 border-t border-gold-100 bg-white">
-        <div className="container mx-auto px-10 text-center">
-          <div className="inline-flex items-center gap-4 mb-12">
-            <div className="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center text-gold-500 text-xl font-black">G</div>
-            <span className="font-black text-2xl tracking-tighter text-slate-800 uppercase italic">GOLD<span className="gold-text-gradient">SHOP</span></span>
-          </div>
-          <p className="text-slate-300 font-black text-[9px] uppercase tracking-[0.5em] italic">
-            &copy; 2026 Gold Shop Affiliate Hub. Curation Platform Active.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

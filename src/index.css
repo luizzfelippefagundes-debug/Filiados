@@ -1,91 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --gradient-brand: linear-gradient(135deg, hsl(280 80% 58%) 0%, hsl(330 88% 60%) 50%, hsl(22 95% 60%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(45 100% 60%) 0%, hsl(38 95% 52%) 100%);
+    --gradient-hero: radial-gradient(at 20% 20%, hsl(280 80% 60% / 0.85), transparent 55%),
+      radial-gradient(at 80% 30%, hsl(330 90% 62% / 0.8), transparent 55%),
+      radial-gradient(at 50% 90%, hsl(22 95% 58% / 0.75), transparent 60%),
+      linear-gradient(135deg, hsl(270 60% 18%), hsl(300 50% 22%));
+    --shadow-card: 0 4px 16px -4px hsl(280 50% 30% / 0.08);
+    --shadow-card-hover: 0 18px 40px -12px hsl(280 70% 40% / 0.25);
+    --shadow-gold: 0 8px 24px -6px hsl(42 95% 50% / 0.45);
+    --shadow-glow: 0 0 0 1px hsl(42 95% 55% / 0.4), 0 12px 32px -8px hsl(330 80% 55% / 0.3);
+  }
+
+  * {
+    border-color: hsl(270 20% 90%);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-[#fdfdfc] text-slate-900 font-sans selection:bg-gold-100 selection:text-gold-900;
-    background-image:
-      radial-gradient(at 0% 0%, hsla(45, 100%, 98%, 1) 0, transparent 50%),
-      radial-gradient(at 50% 0%, hsla(47, 100%, 97%, 1) 0, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(50, 100%, 98%, 1) 0, transparent 50%);
-    background-attachment: fixed;
+    @apply font-sans antialiased;
+    background-color: hsl(30 40% 98%);
+    color: hsl(260 25% 12%);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-.animate-entrance {
-  animation: entrance 1s ease-out forwards;
+@layer utilities {
+  .bg-gradient-brand {
+    background-image: var(--gradient-brand);
+  }
+
+  .bg-gradient-gold {
+    background-image: var(--gradient-gold);
+  }
+
+  .bg-gradient-hero {
+    background-image: var(--gradient-hero);
+  }
+
+  .text-gradient-brand {
+    background-image: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-gold {
+    background-image: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .shadow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 }
 
-@keyframes entrance {
+@keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translateY(40px) scale(0.95);
+    transform: translateY(12px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
-@keyframes float {
-  0% {
-    transform: translateY(0px);
+@keyframes float-anim {
+
+  0%,
+  100% {
+    transform: translateY(0);
   }
 
   50% {
-    transform: translateY(-15px);
-  }
-
-  100% {
-    transform: translateY(0px);
+    transform: translateY(-8px);
   }
 }
 
-.premium-shadow {
-  box-shadow: 0 20px 50px -12px rgba(212, 175, 55, 0.15);
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out both;
 }
 
-.glass-card {
-  @apply bg-white/70 backdrop-blur-xl border border-white shadow-2xl shadow-gold-500/5;
+.animate-float {
+  animation: float-anim 4s ease-in-out infinite;
 }
 
-.gold-text-gradient {
-  background: linear-gradient(to right, #b78c2a, #d4af37, #946a22);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin-slow {
-  animation: spin-slow 8s linear infinite;
-}
-
-/* Custom Scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #fdfdfc;
+  background: hsl(30 40% 98%);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #f3e4a6;
+  background: hsl(42 95% 75%);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #d4af37;
+  background: hsl(42 95% 55%);
 }
