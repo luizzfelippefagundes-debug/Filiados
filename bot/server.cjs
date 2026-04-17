@@ -19,6 +19,13 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
 
+    // Health Check (mantém Render ativo)
+    if (req.method === 'GET' && (req.url === '/' || req.url === '/healthz')) {
+        res.writeHead(200);
+        res.end(JSON.stringify({ status: 'ok', service: 'Gold Shop Bot', uptime: process.uptime() }));
+        return;
+    }
+
     // Rota de Webhook da Evolution API
     if (req.method === 'POST' && req.url === '/webhook') {
         let body = '';
@@ -85,7 +92,7 @@ const server = http.createServer(async (req, res) => {
   <script>
     function save(cat){
       document.getElementById('cats').innerHTML='<p class="msg" style="color:#d4af37">Salvando...</p>';
-      fetch('http://localhost:3333/capture?url=${encodeURIComponent(targetUrl)}&category='+encodeURIComponent(cat))
+      fetch('https://filiados.onrender.com/capture?url=${encodeURIComponent(targetUrl)}&category='+encodeURIComponent(cat))
         .then(r=>r.json())
         .then(()=>{document.getElementById('cats').innerHTML='<p class="msg ok">✅ Salvo!</p>';setTimeout(()=>window.close(),1000)})
         .catch(()=>{document.getElementById('cats').innerHTML='<p class="msg err">❌ Erro</p>'})
