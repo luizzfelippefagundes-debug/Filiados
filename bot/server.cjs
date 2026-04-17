@@ -182,7 +182,7 @@ const runAutomationTask = async () => {
 
 cron.schedule('0 */12 * * *', runAutomationTask);
 
-const PORT = 3333;
+const PORT = process.env.PORT || 3333;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n=========================================`);
     console.log(`🚀 GOLD SHOP BOT ATIVADO (MODO CÓDIGO PURO)`);
