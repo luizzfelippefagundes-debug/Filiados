@@ -13,8 +13,9 @@ const neonQuery = async (q) => {
 };
 
 // === HERO ===
-const Hero = ({ productCount }) => (
+const Hero = ({ productCount, onLogin }) => (
   <header className="relative overflow-hidden bg-gradient-hero text-white">
+    <button onClick={onLogin} className="absolute right-6 top-6 z-20 flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold backdrop-blur transition-smooth hover:bg-white/20"><Lock className="h-3.5 w-3.5" /> Admin</button>
     <div className="pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-secondary/40 blur-3xl animate-float" />
     <div className="pointer-events-none absolute right-0 top-32 h-80 w-80 rounded-full bg-accent/40 blur-3xl animate-float" style={{ animationDelay: '1.2s' }} />
     <div className="pointer-events-none absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-gold/30 blur-3xl animate-float" style={{ animationDelay: '0.6s' }} />
@@ -403,7 +404,7 @@ function App() {
       {/* Click logo 3x = admin */}
       <div onClick={handleLogoClick} className="fixed top-5 left-6 z-[120] cursor-pointer" />
 
-      <Hero productCount={visible.length} />
+      <Hero productCount={visible.length} onLogin={() => setShowAdmin(true)} />
 
       <main id="vitrine" className="container scroll-mt-8 py-12 md:py-16">
         {/* Search */}

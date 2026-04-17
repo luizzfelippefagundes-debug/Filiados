@@ -121,47 +121,67 @@ function fetchDescription(itemId, token) {
 }
 
 /**
- * Plano B: Scraper de alto desempenho usando os metadados do Mercado Livre
+ * Plano B: Scraper resiliente com suporte a redirect e headers robustos
  */
 async function scrapeProduct(url) {
     console.log('🔍 Executando Scraper Resiliente...');
     return new Promise((resolve, reject) => {
-        const client = url.startsWith('https') ? https : http;
-        const options = {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'pt-BR,pt;q=0.9'
-            }
-        };
-
-        client.get(url, options, (res) => {
-            let html = '';
-            res.on('data', chunk => html += chunk);
-            res.on('end', () => {
-                try {
-                    const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i);
-                    const imageMatch = html.match(/<meta property="og:image" content="([^"]+)"/i);
-                    const priceMatch = html.match(/"price":\s?(\d+\.?\d*)/i);
-                    const descMatch = html.match(/<p class="ui-pdp-description__content">([^<]+)/i) ||
-                        html.match(/<meta name="description" content="([^"]+)"/i);
-
-                    if (!titleMatch) throw new Error('Não consegui ler os detalhes da página.');
-
-                    resolve({
-                        title: titleMatch[1].split('|')[0].trim(),
-                        image: imageMatch ? imageMatch[1] : '',
-                        price: priceMatch ? parseFloat(priceMatch[1]) : 0,
-                        description: descMatch ? descMatch[1].trim() : '',
-                        originalPrice: 0,
-                        discount: 0,
-                        affiliateLink: url,
-                        freeShipping: html.includes('Frete grátis')
-                    });
-                } catch (e) {
-                    reject(new Error('Scraper falhou: ' + e.message));
+        function doRequest(reqUrl, depth) {
+            if (depth > 5) return reject(new Error('Muitos redirects'));
+            const client = reqUrl.startsWith('https') ? https : http;
+            const options = {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                    'Accept-Encoding': 'identity',
+                    'Cache-Control': 'no-cache',
+                    'Referer': 'https://www.mercadolivre.com.br/',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'same-origin',
                 }
-            });
-        }).on('error', reject);
+            };
+
+            client.get(reqUrl, options, (res) => {
+                // Seguir redirects
+                if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+                    const next = res.headers.location.startsWith('http') ? res.headers.location : `https://www.mercadolivre.com.br${res.headers.location}`;
+                    console.log(`   ↪ Redirect ${res.statusCode} → ${next.substring(0, 60)}...`);
+                    return doRequest(next, depth + 1);
+                }
+
+                let html = '';
+                res.on('data', chunk => html += chunk);
+                res.on('end', () => {
+                    try {
+                        const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i);
+                        const imageMatch = html.match(/<meta property="og:image" content="([^"]+)"/i);
+                        const priceMatch = html.match(/"price":\s?(\d+\.?\d*)/i) ||
+                            html.match(/data-price="(\d+\.?\d*)"/i) ||
+                            html.match(/andes-money-amount__fraction">(\d[\d.]*)</i);
+                        const descMatch = html.match(/<p class="ui-pdp-description__content">([^<]+)/i) ||
+                            html.match(/<meta name="description" content="([^"]+)"/i);
+
+                        if (!titleMatch) throw new Error('Não consegui ler os detalhes da página.');
+
+                        resolve({
+                            title: titleMatch[1].split('|')[0].trim(),
+                            image: imageMatch ? imageMatch[1] : '',
+                            price: priceMatch ? parseFloat(priceMatch[1]) : 0,
+                            description: descMatch ? descMatch[1].trim() : '',
+                            originalPrice: 0,
+                            discount: 0,
+                            affiliateLink: url,
+                            freeShipping: html.includes('Frete grátis') || html.includes('free_shipping":true')
+                        });
+                    } catch (e) {
+                        reject(new Error('Scraper falhou: ' + e.message));
+                    }
+                });
+            }).on('error', reject);
+        }
+        doRequest(url, 0);
     });
 }
 
