@@ -83,8 +83,8 @@ const CategoryFilter = ({ categories, active, onChange, count }) => (
 // === PRODUCT CARD ===
 const ProductCard = ({ product, onClick }) => {
   const price = parseFloat(product.price?.toString().replace(',', '.') || 0);
-  const originalPrice = price * 1.35;
-  const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+  const originalPrice = parseFloat(product.original_price?.toString().replace(',', '.') || price);
+  const discount = product.discount || 0;
 
   const formatBRL = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -134,8 +134,8 @@ const ProductCard = ({ product, onClick }) => {
 const ProductModal = ({ product, onClose }) => {
   if (!product) return null;
   const price = parseFloat(product.price?.toString().replace(',', '.') || 0);
-  const originalPrice = price * 1.35;
-  const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+  const originalPrice = parseFloat(product.original_price?.toString().replace(',', '.') || price);
+  const discount = product.discount || 0;
   const formatBRL = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
@@ -317,7 +317,7 @@ const AdminPanel = ({ onClose, onRefresh }) => {
             </div>
             <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
               <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2"><MousePointer2 size={16} className="text-gold" /> Gold Push</h3>
-              <a href="javascript:(function(){try{var t=(document.querySelector('.ui-pdp-title')||document.querySelector('h1'))?.innerText.trim()||document.title;var pc=document.querySelector('.ui-pdp-price__second-line')||document.querySelector('.ui-pdp-price');var f=pc?.querySelector('.andes-money-amount__fraction')?.innerText.replace(/\D/g,'')||'0';var c=pc?.querySelector('.andes-money-amount__cents')?.innerText||'00';var p=f+','+c;var i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||document.querySelector('meta[property=\'og:image\']')?.content||'';var url=encodeURIComponent(window.location.href);var target='https://filiados.onrender.com/capture?format=html&url='+url+'&title='+encodeURIComponent(t)+'&price='+encodeURIComponent(p)+'&image='+encodeURIComponent(i);window.open(target,'GoldPush','width=500,height=400')}catch(e){window.open('https://filiados.onrender.com/capture?format=html&url='+encodeURIComponent(window.location.href),'GoldPush','width=500,height=400')}})()" className="inline-block bg-gradient-gold text-gold-foreground px-5 py-2.5 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-gold hover:opacity-90 transition-smooth no-underline">🚀 Arraste para Favoritos</a>
+              <a href="javascript:(function(){try{var t=(document.querySelector('.ui-pdp-title')||document.querySelector('h1'))?.innerText.trim()||document.title;var pc=document.querySelector('.ui-pdp-price__second-line')||document.querySelector('.ui-pdp-price');var f=pc?.querySelector('.andes-money-amount__fraction')?.innerText.replace(/\D/g,'')||'0';var c=pc?.querySelector('.andes-money-amount__cents')?.innerText||'00';var p=f+','+c;var opc=document.querySelector('.ui-pdp-price__part--metadata');var opf=opc?.querySelector('.andes-money-amount__fraction')?.innerText.replace(/\D/g,'')||f;var opc=opc?.querySelector('.andes-money-amount__cents')?.innerText||c;var op=opf+','+opc;var d=document.querySelector('.ui-pdp-price__second-line .ui-pdp-price__discount')?.innerText.replace(/\D/g,'')||0;var i=document.querySelector('.ui-pdp-gallery__figure__image')?.src||document.querySelector('meta[property=\'og:image\']')?.content||'';var url=encodeURIComponent(window.location.href);var target='https://filiados.onrender.com/capture?format=html&url='+url+'&title='+encodeURIComponent(t)+'&price='+encodeURIComponent(p)+'&originalPrice='+encodeURIComponent(op)+'&discount='+encodeURIComponent(d)+'&image='+encodeURIComponent(i);window.open(target,'GoldPush','width=500,height=400')}catch(e){window.open('https://filiados.onrender.com/capture?format=html&url='+encodeURIComponent(window.location.href),'GoldPush','width=500,height=400')}})()" className="inline-block bg-gradient-gold text-gold-foreground px-5 py-2.5 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-gold hover:opacity-90 transition-smooth no-underline">🚀 Arraste para Favoritos</a>
             </div>
             <div className="bg-card rounded-2xl p-6 border border-border shadow-card text-center">
               <button onClick={async () => { try { await fetch('https://filiados.onrender.com/run-automation', { method: 'POST' }); alert('🔄 Sincronização iniciada!'); } catch { } }} className="w-full p-3 bg-gold-soft border border-gold/20 rounded-xl text-gold-foreground font-bold text-xs transition-smooth hover:bg-gold-soft/80 flex items-center justify-center gap-2">

@@ -68,12 +68,16 @@ const server = http.createServer(async (req, res) => {
             const clientTitle = urlParams.get('title');
             const clientPrice = urlParams.get('price');
             const clientImage = urlParams.get('image');
+            const clientOriginalPrice = urlParams.get('originalPrice');
+            const clientDiscount = urlParams.get('discount');
 
             if (clientTitle) {
                 console.log(`📡 [Server] Usando dados enviados pelo cliente: ${clientTitle}`);
                 product = {
                     title: clientTitle,
                     price: clientPrice || '0',
+                    originalPrice: clientOriginalPrice || clientPrice || '0',
+                    discount: clientDiscount || 0,
                     image: clientImage || '',
                     description: 'Capturado via Gold Push'
                 };
@@ -105,6 +109,8 @@ const server = http.createServer(async (req, res) => {
                 // Passamos os dados extraídos para o formulário para que o clique final os use
                 const encodedTitle = encodeURIComponent(product.title || product.name);
                 const encodedPrice = encodeURIComponent(product.price);
+                const encodedOriginalPrice = encodeURIComponent(product.originalPrice || product.price);
+                const encodedDiscount = encodeURIComponent(product.discount || 0);
                 const encodedImage = encodeURIComponent(product.image || product.image_url || '');
 
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -124,11 +130,14 @@ const server = http.createServer(async (req, res) => {
                     function save(cat){
                       const baseUrl = window.location.origin + window.location.pathname;
                       const params = new URLSearchParams();
-                      params.set('url', "${targetUrl}");
-                      params.set('title', decodeURIComponent("${encodedTitle}"));
+                      params.set('url', "${targetUrl.replace(/"/g, '\\"')}");
+                      params.set('title', decodeURIComponent("${encodedTitle.replace(/"/g, '\\"') || ''}"));
                       params.set('price', decodeURIComponent("${encodedPrice}"));
+                      params.set('originalPrice', decodeURIComponent("${encodedOriginalPrice}"));
+                      params.set('discount', decodeURIComponent("${encodedDiscount}"));
                       params.set('image', decodeURIComponent("${encodedImage}"));
                       params.set('category', cat);
+                      params.set('format', 'json');
 
                       document.getElementById('cats').innerHTML = '<p style="color:#d4af37">Salvando...</p>';
                       
@@ -150,11 +159,12 @@ const server = http.createServer(async (req, res) => {
 
             // Salvar no banco (com ou sem categoria)
             const query = `
-                INSERT INTO products (title, price, image_url, affiliate_link, category, description)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO products (title, price, image_url, affiliate_link, category, description, original_price, discount)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 ON CONFLICT (affiliate_link) DO UPDATE SET
                     title = EXCLUDED.title, price = EXCLUDED.price,
-                    description = EXCLUDED.description, category = EXCLUDED.category
+                    description = EXCLUDED.description, category = EXCLUDED.category,
+                    original_price = EXCLUDED.original_price, discount = EXCLUDED.discount
                 RETURNING *;
             `;
             const values = [
@@ -163,7 +173,9 @@ const server = http.createServer(async (req, res) => {
                 product.image || product.image_url || '',
                 targetUrl,
                 category || 'Geral',
-                product.description || ''
+                product.description || '',
+                (product.originalPrice || product.price)?.toString().replace('.', ',') || '0',
+                parseInt(product.discount) || 0
             ];
 
             const result = await pgClient.query(query, values);
