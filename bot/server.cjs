@@ -91,10 +91,15 @@ const server = http.createServer(async (req, res) => {
                 throw new Error('Falha ao extrair dados do produto');
             }
 
-            // Se é popup HTML e NÃO veio categoria ainda → mostra formulário
+            // Se for HTML (Bookmarklet), mostra seletor de categorias
             const isHtml = urlParams.get('format') === 'html';
             if (isHtml && !category) {
-                const cats = ['Beleza', 'Eletrônicos', 'Casa', 'Moda', 'Saúde', 'Outros'];
+                const cats = [
+                    'Beleza', 'Eletrônicos', 'Casa', 'Cozinha',
+                    'Moda', 'Calçados', 'Gamer', 'Saúde',
+                    'Suplementos', 'Ferramentas', 'Pet Shop', 'Bebês',
+                    'Automotivo', 'Papelaria', 'Outros'
+                ];
                 const btns = cats.map(c => `<button onclick="save('${c}')">${c}</button>`).join('');
 
                 // Passamos os dados extraídos para o formulário para que o clique final os use
@@ -105,15 +110,15 @@ const server = http.createServer(async (req, res) => {
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(`<html><head><style>
                     body { font-family: sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-                    .card { background: #1e293b; padding: 24px; border-radius: 16px; border: 1px solid #334155; text-align: center; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-                    p { font-size: 14px; opacity: 0.8; margin-bottom: 20px; color: #94a3b8; }
-                    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-                    button { background: #334155; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; border: 1px solid transparent;    }
+                    .card { background: #1e293b; padding: 20px; border-radius: 16px; border: 1px solid #334155; text-align: center; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+                    p { font-size: 13px; opacity: 0.7; margin-bottom: 15px; color: #94a3b8; }
+                    .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+                    button { background: #334155; color: white; border: none; padding: 10px 5px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 11px; transition: all 0.2s; border: 1px solid transparent; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
                     button:hover { background: #475569; border-color: #d4af37; color: #d4af37; }
-                    h2 { color: #d4af37; margin: 0 0 8px 0; font-size: 20px; }
+                    h2 { color: #d4af37; margin: 0 0 5px 0; font-size: 18px; }
                 </style></head><body><div class="card">
-                  <h2>Onde salvar?</h2>
-                  <p>Escolha a categoria para este achado</p>
+                  <h2>📂 Categoria</h2>
+                  <p>Onde salvar este achado?</p>
                   <div class="grid" id="cats">${btns}</div>
                   <script>
                     function save(cat){
