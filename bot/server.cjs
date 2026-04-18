@@ -9,7 +9,11 @@ const axios = require('axios');
 const pgClient = new Client({
     connectionString: 'postgresql://neondb_owner:npg_lWzA8uLghEU0@ep-gentle-hall-amii66wb-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require',
 });
-pgClient.connect();
+pgClient.connect().catch(e => console.error('❌ Erro ao conectar no DB:', e.message));
+
+// Prevenir crash global
+process.on('uncaughtException', (err) => { console.error('💥 Uncaught Exception:', err.message); });
+process.on('unhandledRejection', (err) => { console.error('💥 Unhandled Rejection:', err); });
 
 /**
  * Servidor Principal Gold Shop (Modo Full Bot + Vitrine)
@@ -113,8 +117,8 @@ const server = http.createServer(async (req, res) => {
             `;
             const values = [
                 product.title,
-                product.price.toString().replace('.', ','),
-                product.image,
+                product.price?.toString().replace('.', ',') || '0',
+                product.image || product.image_url || '',
                 targetUrl,
                 category || 'Geral',
                 product.description || ''
