@@ -136,29 +136,35 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify(result.rows[0]));
         } catch (error) {
             console.error('💥 [Server] Erro na captura:', error.message);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: error.message }));
+            if (!res.headersSent) {
+                if (isHtml) {
+                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                    res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Gold Push</title></head><body style="background:#0f172a;color:#fff;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center"><div><h2 style="color:#ef4444">❌ Erro</h2><p>${error.message}</p><button onclick="window.close()" style="margin-top:16px;padding:8px 20px;background:#d4af37;border:none;border-radius:8px;color:#000;cursor:pointer;font-weight:bold">Fechar</button></div></body></html>`);
+                } else {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: error.message }));
+                }
+            }
+            return;
         }
-        return;
-    }
 
-    // Gatilho Manual de Automação
-    if (req.method === 'POST' && req.url === '/run-automation') {
-        runAutomationTask(); // Executa em background
-        res.writeHead(200);
-        res.end(JSON.stringify({ status: 'started' }));
-        return;
-    }
+        // Gatilho Manual de Automação
+        if (req.method === 'POST' && req.url === '/run-automation') {
+            runAutomationTask(); // Executa em background
+            res.writeHead(200);
+            res.end(JSON.stringify({ status: 'started' }));
+            return;
+        }
 
-    // Health Check
-    if (req.url === '/health') {
-        res.writeHead(200); res.end('Gold Shop Bot is Healthy 🚀');
-        return;
-    }
+        // Health Check
+        if (req.url === '/health') {
+            res.writeHead(200); res.end('Gold Shop Bot is Healthy 🚀');
+            return;
+        }
 
-    res.writeHead(404);
-    res.end('Not Found');
-});
+        res.writeHead(404);
+        res.end('Not Found');
+    });
 
 /**
  * AUTOMAÇÃO NATIVA (Substitui o n8n para economia de memória)

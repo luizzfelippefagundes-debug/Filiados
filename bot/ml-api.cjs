@@ -55,8 +55,12 @@ async function getProduct(url, clientId, clientSecret) {
 }
 
 function extractId(url) {
+    // Formato /p/MLB12345 (catálogo)
+    const pMatch = url.match(/\/p\/MLB(\d+)/i);
+    if (pMatch) return 'MLB' + pMatch[1];
+    // Formato MLB-12345 ou MLB12345 (item)
     const match = url.match(/MLB[- ]?(\d+)/i);
-    if (!match) throw new Error('ID não encontrado');
+    if (!match) throw new Error('ID não encontrado na URL');
     return 'MLB' + match[1];
 }
 
@@ -122,29 +126,38 @@ function fetchItem(itemId, token, affiliateLink) {
  */
 function fetchItemPublic(itemId, affiliateLink) {
     return new Promise((resolve, reject) => {
-        const apiUrl = `https://api.mercadolibre.com/items/${itemId}`;
-        https.get(apiUrl, { headers: { 'Accept': 'application/json' } }, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    const item = JSON.parse(data);
-                    if (item.error) return reject(new Error(item.message || 'Item não encontrado'));
-                    console.log(`   ✅ API pública retornou: ${item.title?.substring(0, 40)}...`);
-                    resolve({
-                        id: itemId,
-                        title: item.title,
-                        price: item.price || 0,
-                        originalPrice: item.original_price || item.price,
-                        discount: item.original_price > item.price ? Math.round((1 - item.price / item.original_price) * 100) : 0,
-                        image: item.pictures?.[0]?.secure_url || item.thumbnail?.replace('-I.jpg', '-O.jpg') || '',
-                        description: '',
-                        affiliateLink,
-                        freeShipping: item.shipping?.free_shipping || false
-                    });
-                } catch { reject(new Error('Erro parsing API pública')); }
-            });
-        }).on('error', reject);
+        // Tentar como item primeiro, depois como produto
+        const tryEndpoint = (endpoint) => {
+            https.get(endpoint, { headers: { 'Accept': 'application/json' } }, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        const item = JSON.parse(data);
+                        // Validar que temos dados úteis
+                        if (!item.title && !item.name) {
+                            return reject(new Error('Sem título no retorno da API'));
+                        }
+                        const title = item.title || item.name || 'Produto';
+                        console.log(`   ✅ API pública retornou: ${title.substring(0, 40)}...`);
+                        resolve({
+                            id: itemId,
+                            title: title,
+                            price: item.price || 0,
+                            originalPrice: item.original_price || item.price || 0,
+                            discount: (item.original_price && item.original_price > item.price) ? Math.round((1 - item.price / item.original_price) * 100) : 0,
+                            image: item.pictures?.[0]?.secure_url || item.thumbnail?.replace('-I.jpg', '-O.jpg') || '',
+                            description: '',
+                            affiliateLink,
+                            freeShipping: item.shipping?.free_shipping || false
+                        });
+                    } catch { reject(new Error('Erro parsing API pública')); }
+                });
+            }).on('error', reject);
+        };
+        // Primeiro tenta /items/, se falhar tenta /products/
+        const itemUrl = `https://api.mercadolibre.com/items/${itemId}`;
+        tryEndpoint(itemUrl);
     });
 }
 
