@@ -127,8 +127,14 @@ function fetchItem(itemId, token, affiliateLink) {
 function fetchItemPublic(itemId, affiliateLink) {
     return new Promise((resolve, reject) => {
         // Tentar como item primeiro, depois como produto
-        const tryEndpoint = (endpoint) => {
+        const tryEndpoint = (endpoint, isFallback) => {
             https.get(endpoint, { headers: { 'Accept': 'application/json' } }, (res) => {
+                // Se 404 e nao for fallback, tenta /products/
+                if (res.statusCode === 404 && !isFallback) {
+                    console.log(`   🟡 /items/ não encontrado. Tentando /products/...`);
+                    return tryEndpoint(`https://api.mercadolibre.com/products/${itemId}`, true);
+                }
+
                 let data = '';
                 res.on('data', chunk => data += chunk);
                 res.on('end', () => {
@@ -139,25 +145,34 @@ function fetchItemPublic(itemId, affiliateLink) {
                             return reject(new Error('Sem título no retorno da API'));
                         }
                         const title = item.title || item.name || 'Produto';
-                        console.log(`   ✅ API pública retornou: ${title.substring(0, 40)}...`);
+                        console.log(`   ✅ API pública [${isFallback ? 'Product' : 'Item'}] retornou: ${title.substring(0, 40)}...`);
+
+                        // Normalizar dados (api de products tem campos diferentes)
+                        const price = item.price || (item.buy_box_winner?.price) || 0;
+
                         resolve({
                             id: itemId,
                             title: title,
-                            price: item.price || 0,
-                            originalPrice: item.original_price || item.price || 0,
-                            discount: (item.original_price && item.original_price > item.price) ? Math.round((1 - item.price / item.original_price) * 100) : 0,
+                            price: price,
+                            originalPrice: item.original_price || price,
+                            discount: (item.original_price && item.original_price > price) ? Math.round((1 - price / item.original_price) * 100) : 0,
                             image: item.pictures?.[0]?.secure_url || item.thumbnail?.replace('-I.jpg', '-O.jpg') || '',
                             description: '',
                             affiliateLink,
                             freeShipping: item.shipping?.free_shipping || false
                         });
-                    } catch { reject(new Error('Erro parsing API pública')); }
+                    } catch (e) {
+                        if (!isFallback) tryEndpoint(`https://api.mercadolibre.com/products/${itemId}`, true);
+                        else reject(new Error('Erro parsing API pública: ' + e.message));
+                    }
                 });
-            }).on('error', reject);
+            }).on('error', (e) => {
+                if (!isFallback) tryEndpoint(`https://api.mercadolibre.com/products/${itemId}`, true);
+                else reject(e);
+            });
         };
         // Primeiro tenta /items/, se falhar tenta /products/
-        const itemUrl = `https://api.mercadolibre.com/items/${itemId}`;
-        tryEndpoint(itemUrl);
+        tryEndpoint(`https://api.mercadolibre.com/items/${itemId}`, false);
     });
 }
 
