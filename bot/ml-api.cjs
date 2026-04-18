@@ -126,12 +126,13 @@ function fetchItem(itemId, token, affiliateLink) {
  */
 function fetchItemPublic(itemId, affiliateLink) {
     return new Promise((resolve, reject) => {
-        // Tentar como item primeiro, depois como produto
+        const isCatalog = affiliateLink.includes('/p/MLB');
+
         const tryEndpoint = (endpoint, isFallback) => {
+            console.log(`   📡 Chamando API Pública ${isFallback ? '(Fallback)' : ''}: ${endpoint.substring(0, 60)}...`);
             https.get(endpoint, { headers: { 'Accept': 'application/json' } }, (res) => {
-                // Se 404 e nao for fallback, tenta /products/
+                // Erro 404 → Tenta fallback
                 if (res.statusCode === 404 && !isFallback) {
-                    console.log(`   🟡 /items/ não encontrado. Tentando /products/...`);
                     return tryEndpoint(`https://api.mercadolibre.com/products/${itemId}`, true);
                 }
 
@@ -140,15 +141,20 @@ function fetchItemPublic(itemId, affiliateLink) {
                 res.on('end', () => {
                     try {
                         const item = JSON.parse(data);
-                        // Validar que temos dados úteis
-                        if (!item.title && !item.name) {
-                            return reject(new Error('Sem título no retorno da API'));
-                        }
-                        const title = item.title || item.name || 'Produto';
-                        console.log(`   ✅ API pública [${isFallback ? 'Product' : 'Item'}] retornou: ${title.substring(0, 40)}...`);
 
-                        // Normalizar dados (api de products tem campos diferentes)
-                        const price = item.price || (item.buy_box_winner?.price) || 0;
+                        // Se não tem título/nome, tenta fallback se ainda não for
+                        if (!item.title && !item.name) {
+                            if (!isFallback) return tryEndpoint(`https://api.mercadolibre.com/products/${itemId}`, true);
+                            return reject(new Error('Produto não identificado na API do M. Livre.'));
+                        }
+
+                        const title = item.title || item.name || 'Produto sem título';
+                        console.log(`   ✅ API pública retornou: ${title.substring(0, 40)}...`);
+
+                        // API de Products (/p/) tem estrutura diferente
+                        const price = item.price || (item.buy_box_winner && item.buy_box_winner.price) || 0;
+                        const mainImage = item.pictures && item.pictures[0] ? (item.pictures[0].secure_url || item.pictures[0].url) :
+                            (item.thumbnail ? item.thumbnail.replace('-I.jpg', '-O.jpg') : '');
 
                         resolve({
                             id: itemId,
@@ -156,14 +162,14 @@ function fetchItemPublic(itemId, affiliateLink) {
                             price: price,
                             originalPrice: item.original_price || price,
                             discount: (item.original_price && item.original_price > price) ? Math.round((1 - price / item.original_price) * 100) : 0,
-                            image: item.pictures?.[0]?.secure_url || item.thumbnail?.replace('-I.jpg', '-O.jpg') || '',
+                            image: mainImage,
                             description: '',
                             affiliateLink,
-                            freeShipping: item.shipping?.free_shipping || false
+                            freeShipping: item.shipping ? item.shipping.free_shipping : false
                         });
                     } catch (e) {
                         if (!isFallback) tryEndpoint(`https://api.mercadolibre.com/products/${itemId}`, true);
-                        else reject(new Error('Erro parsing API pública: ' + e.message));
+                        else reject(new Error('Falha ao processar dados da API: ' + e.message));
                     }
                 });
             }).on('error', (e) => {
@@ -171,8 +177,10 @@ function fetchItemPublic(itemId, affiliateLink) {
                 else reject(e);
             });
         };
-        // Primeiro tenta /items/, se falhar tenta /products/
-        tryEndpoint(`https://api.mercadolibre.com/items/${itemId}`, false);
+
+        // Inicia pelo melhor chute
+        const startPath = isCatalog ? `/products/${itemId}` : `/items/${itemId}`;
+        tryEndpoint(`https://api.mercadolibre.com${startPath}`, isCatalog);
     });
 }
 
