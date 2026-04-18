@@ -63,11 +63,17 @@ const server = http.createServer(async (req, res) => {
 
         try {
             console.log(`\n🔍 [Server] Capturando: ${targetUrl}`);
-            const product = await offerService.extract(targetUrl);
+            // Timeout de 15s para não travar o servidor
+            const timeoutMs = 15000;
+            const product = await Promise.race([
+                offerService.extract(targetUrl),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: extração demorou demais')), timeoutMs))
+            ]);
             if (!product) throw new Error('Falha ao extrair dados do produto');
 
             // Se é popup HTML e NÃO veio categoria ainda → mostra formulário
             if (isHtml && !category) {
+
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 const cats = ['Suplementos', 'Skincare', 'Fitness', 'Eletrônicos', 'Casa', 'Beleza', 'Moda', 'Saúde', 'Geral'];
                 const btns = cats.map(c => `<button onclick="save('${c}')" class="cat-btn">${c}</button>`).join('');
