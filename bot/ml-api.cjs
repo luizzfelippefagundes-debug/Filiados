@@ -58,29 +58,37 @@ async function getProduct(url, clientId, clientSecret) {
 function extractIds(url) {
     const ids = [];
     const seen = new Set();
+    const decodedUrl = decodeURIComponent(url);
 
     const add = (id, type) => {
-        if (id && !seen.has(id)) {
-            ids.push({ id: id.toUpperCase(), type });
-            seen.add(id);
+        if (id) {
+            // Limpeza extra: Garante que só pegamos o que importa (MLB ou MLBU + números)
+            const cleanMatch = id.match(/(MLB\d+|MLBU\d+)/i);
+            if (cleanMatch) {
+                const cleanId = cleanMatch[1].toUpperCase();
+                if (!seen.has(cleanId)) {
+                    ids.push({ id: cleanId, type });
+                    seen.add(cleanId);
+                }
+            }
         }
     };
 
     // 1. Buscar item_id ou wid ou id nos parâmetros (diretos ou nested em pdp_filters)
-    const complexMatch = url.match(/(?:item_id|wid|id)(?:%3A|:|=)(MLB\d+|MLBU\d+)/gi);
+    const complexMatch = decodedUrl.match(/(?:item_id|wid|id)(?::|=)(MLB\d+|MLBU\d+)/gi);
     if (complexMatch) {
         complexMatch.forEach(m => {
-            const id = m.split(/[:%=]/).pop();
+            const id = m.split(/[:=]/).pop();
             add(id, 'item');
         });
     }
 
     // 2. Formato /p/MLB12345 (catálogo)
-    const pMatch = url.match(/\/p\/(MLB\d+|MLBU\d+)/i);
+    const pMatch = decodedUrl.match(/\/p\/(MLB\d+|MLBU\d+)/i);
     if (pMatch) add(pMatch[1], 'product');
 
     // 3. Qualquer outro padrão MLB/MLBU na URL
-    const generalMatch = url.match(/(MLB\d+|MLBU\d+)/gi);
+    const generalMatch = decodedUrl.match(/(MLB\d+|MLBU\d+)/gi);
     if (generalMatch) {
         generalMatch.forEach(id => add(id, 'item'));
     }
