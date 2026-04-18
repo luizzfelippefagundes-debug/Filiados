@@ -63,52 +63,83 @@ const server = http.createServer(async (req, res) => {
 
         try {
             console.log(`\n🔍 [Server] Capturando: ${targetUrl}`);
-            // Timeout de 15s para não travar o servidor
-            const timeoutMs = 15000;
-            const product = await Promise.race([
-                offerService.extract(targetUrl),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: extração demorou demais')), timeoutMs))
-            ]);
-            if (!product) throw new Error('Falha ao extrair dados do produto');
+
+            let product;
+            const clientTitle = urlParams.get('title');
+            const clientPrice = urlParams.get('price');
+            const clientImage = urlParams.get('image');
+
+            if (clientTitle) {
+                console.log(`📡 [Server] Usando dados enviados pelo cliente: ${clientTitle}`);
+                product = {
+                    title: clientTitle,
+                    price: clientPrice || '0',
+                    image: clientImage || '',
+                    description: 'Capturado via Gold Push'
+                };
+            } else {
+                console.log(`🔍 [OfferService] Extraindo: ${targetUrl}`);
+                // Timeout de 15s para não travar o servidor
+                const timeoutMs = 15000;
+                product = await Promise.race([
+                    offerService.extract(targetUrl),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: extração demorou demais')), timeoutMs))
+                ]);
+            }
+
+            if (!product || (!product.title && !product.name)) {
+                throw new Error('Falha ao extrair dados do produto');
+            }
 
             // Se é popup HTML e NÃO veio categoria ainda → mostra formulário
+            const isHtml = urlParams.get('format') === 'html';
             if (isHtml && !category) {
+                const cats = ['Beleza', 'Eletrônicos', 'Casa', 'Moda', 'Saúde', 'Outros'];
+                const btns = cats.map(c => `<button onclick="save('${c}')">${c}</button>`).join('');
+
+                // Passamos os dados extraídos para o formulário para que o clique final os use
+                const encodedTitle = encodeURIComponent(product.title || product.name);
+                const encodedPrice = encodeURIComponent(product.price);
+                const encodedImage = encodeURIComponent(product.image || product.image_url || '');
 
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                const cats = ['Suplementos', 'Skincare', 'Fitness', 'Eletrônicos', 'Casa', 'Beleza', 'Moda', 'Saúde', 'Geral'];
-                const btns = cats.map(c => `<button onclick="save('${c}')" class="cat-btn">${c}</button>`).join('');
-                res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Gold Push</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#0f172a;color:#fff;font-family:'Inter',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh}
-  .wrap{text-align:center;width:90%;max-width:380px}
-  h2{color:#d4af37;font-size:18px;margin-bottom:6px}
-  .title{color:#94a3b8;font-size:12px;margin-bottom:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .price{color:#d4af37;font-size:24px;font-weight:900;margin-bottom:18px}
-  .label{color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:3px;margin-bottom:10px}
-  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px}
-  .cat-btn{padding:10px 4px;border:1px solid rgba(212,175,55,0.15);background:rgba(255,255,255,0.04);color:#fff;border-radius:10px;cursor:pointer;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;transition:all 0.2s}
-  .cat-btn:hover{background:rgba(212,175,55,0.15);border-color:#d4af37;color:#d4af37}
-  .msg{padding:16px;font-size:14px}
-  .ok{color:#22c55e}
-  .err{color:#ef4444}
-</style></head><body>
-<div class="wrap">
-  <h2>🚀 Gold Push</h2>
-  <p class="title">${product.title.replace(/'/g, "\\'")}</p>
-  <p class="price">R$ ${product.price}</p>
-  <p class="label">Selecione a categoria</p>
-  <div class="grid" id="cats">${btns}</div>
-  <script>
-    function save(cat){
-      document.getElementById('cats').innerHTML='<p class="msg" style="color:#d4af37">Salvando...</p>';
-      fetch('https://filiados.onrender.com/capture?url=${encodeURIComponent(targetUrl)}&category='+encodeURIComponent(cat))
-        .then(r=>r.json())
-        .then(()=>{document.getElementById('cats').innerHTML='<p class="msg ok">✅ Salvo!</p>';setTimeout(()=>window.close(),1000)})
-        .catch(()=>{document.getElementById('cats').innerHTML='<p class="msg err">❌ Erro</p>'})
-    }
-  </script>
-</div></body></html>`);
+                res.end(`<html><head><style>
+                    body { font-family: sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+                    .card { background: #1e293b; padding: 24px; border-radius: 16px; border: 1px solid #334155; text-align: center; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+                    p { font-size: 14px; opacity: 0.8; margin-bottom: 20px; color: #94a3b8; }
+                    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+                    button { background: #334155; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; border: 1px solid transparent; }
+                    button:hover { background: #475569; border-color: #d4af37; color: #d4af37; }
+                    h2 { color: #d4af37; margin: 0 0 8px 0; font-size: 20px; }
+                </style></head><body><div class="card">
+                  <h2>Onde salvar?</h2>
+                  <p>Escolha a categoria para este achado</p>
+                  <div class="grid" id="cats">${btns}</div>
+                  <script>
+                    function save(cat){
+                      const baseUrl = window.location.origin + window.location.pathname;
+                      const params = new URLSearchParams();
+                      params.set('url', "${targetUrl}");
+                      params.set('title', decodeURIComponent("${encodedTitle}"));
+                      params.set('price', decodeURIComponent("${encodedPrice}"));
+                      params.set('image', decodeURIComponent("${encodedImage}"));
+                      params.set('category', cat);
+
+                      document.getElementById('cats').innerHTML = '<p style="color:#d4af37">Salvando...</p>';
+                      
+                      fetch(baseUrl + '?' + params.toString())
+                        .then(r => r.json())
+                        .then(() => {
+                           document.getElementById('cats').innerHTML = '<h2 style="color:#22c55e">✅ Salvo!</h2>';
+                           setTimeout(() => window.close(), 1000);
+                        })
+                        .catch(err => {
+                           document.getElementById('cats').innerHTML = '<p style="color:#ef4444">❌ Erro ao salvar</p>';
+                           console.error(err);
+                        });
+                    }
+                  </script>
+                </div></body></html>`);
                 return;
             }
 
@@ -122,7 +153,7 @@ const server = http.createServer(async (req, res) => {
                 RETURNING *;
             `;
             const values = [
-                product.title,
+                product.title || product.name,
                 product.price?.toString().replace('.', ',') || '0',
                 product.image || product.image_url || '',
                 targetUrl,
