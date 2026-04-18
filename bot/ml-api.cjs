@@ -55,18 +55,27 @@ async function getProduct(url, clientId, clientSecret) {
 }
 
 function extractId(url) {
-    // Prioridade 1: Buscar item_id nos parâmetros (comum em /p/ catálogo)
-    const urlObj = new URL(url.replace(/#.*$/, ''));
-    const itemIdFromQuery = urlObj.searchParams.get('item_id') || urlObj.searchParams.get('id');
-    if (itemIdFromQuery && itemIdFromQuery.match(/^MLB\d+$/i)) {
-        return { id: itemIdFromQuery.toUpperCase(), type: 'item' };
+    // Prioridade 1: Buscar item_id em qualquer lugar da URL (mesmo dentro de pdp_filters)
+    // Regex procura por item_id seguido de : ou = e o ID MLB
+    const nestedMatch = url.match(/item_id(?:%3A|:|=)(MLB\d+)/i);
+    if (nestedMatch) {
+        return { id: nestedMatch[1].toUpperCase(), type: 'item' };
     }
 
-    // Prioridade 2: Formato /p/MLB12345 (catálogo)
+    // Prioridade 2: Buscar id/item_id nos parâmetros diretos
+    try {
+        const urlObj = new URL(url.replace(/#.*$/, ''));
+        const itemIdFromQuery = urlObj.searchParams.get('item_id') || urlObj.searchParams.get('id');
+        if (itemIdFromQuery && itemIdFromQuery.match(/^MLB\d+$/i)) {
+            return { id: itemIdFromQuery.toUpperCase(), type: 'item' };
+        }
+    } catch (e) { }
+
+    // Prioridade 3: Formato /p/MLB12345 (catálogo)
     const pMatch = url.match(/\/p\/MLB(\d+)/i);
     if (pMatch) return { id: 'MLB' + pMatch[1], type: 'product' };
 
-    // Prioridade 3: Formato MLB-12345 ou MLB12345 (item)
+    // Prioridade 4: Formato MLB-12345 ou MLB12345 (item)
     const match = url.match(/MLB[- ]?(\d+)/i);
     if (!match) throw new Error('ID não encontrado na URL');
     return { id: 'MLB' + match[1], type: 'item' };
