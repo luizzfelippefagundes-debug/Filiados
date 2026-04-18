@@ -13,19 +13,20 @@ async function getProduct(url, clientId, clientSecret) {
         try {
             console.log('--- Tentando via API oficial (com credenciais)...');
             const accessToken = await getAccessToken(clientId, clientSecret);
-            const { id: itemId } = extractId(url);
-            productData = await fetchItem(itemId, accessToken, url);
+            const candidates = extractIds(url);
+            // Tenta o primeiro ID na API oficial
+            productData = await fetchItem(candidates[0].id, accessToken, url);
         } catch (e) {
             console.warn('⚠️ API com credenciais falhou:', e.message);
         }
     }
 
-    // Plano B: API pública (sem auth — funciona de qualquer IP)
+    // Plano B: API pública (sem auth — tentamos TODOS os IDs encontrados)
     if (!productData) {
         try {
             console.log('--- Tentando via API pública (sem auth)...');
-            const { id: itemId, type: itemType } = extractId(url);
-            productData = await fetchItemPublic(itemId, itemType, url);
+            const candidates = extractIds(url);
+            productData = await fetchItemPublic(candidates, url);
         } catch (e) {
             console.warn('⚠️ API pública falhou:', e.message);
         }
@@ -43,9 +44,9 @@ async function getProduct(url, clientId, clientSecret) {
     // Tentar buscar descrição se já temos o produto mas falta a descrição
     if (productData && !productData.description && clientId && clientSecret) {
         try {
-            const { id: itemId } = extractId(url);
+            const candidates = extractIds(url);
             const accessToken = await getAccessToken(clientId, clientSecret);
-            productData.description = await fetchDescription(itemId, accessToken);
+            productData.description = await fetchDescription(candidates[0].id, accessToken);
         } catch (e) {
             console.warn('⚠️ Falha ao buscar descrição extra.');
         }
@@ -54,31 +55,38 @@ async function getProduct(url, clientId, clientSecret) {
     return productData;
 }
 
-function extractId(url) {
-    // Prioridade 1: Buscar item_id em qualquer lugar da URL (mesmo dentro de pdp_filters)
-    // Regex procura por item_id seguido de : ou = e o ID MLB
-    const nestedMatch = url.match(/item_id(?:%3A|:|=)(MLB\d+)/i);
-    if (nestedMatch) {
-        return { id: nestedMatch[1].toUpperCase(), type: 'item' };
+function extractIds(url) {
+    const ids = [];
+    const seen = new Set();
+
+    const add = (id, type) => {
+        if (id && !seen.has(id)) {
+            ids.push({ id: id.toUpperCase(), type });
+            seen.add(id);
+        }
+    };
+
+    // 1. Buscar item_id ou wid ou id nos parâmetros (diretos ou nested em pdp_filters)
+    const complexMatch = url.match(/(?:item_id|wid|id)(?:%3A|:|=)(MLB\d+|MLBU\d+)/gi);
+    if (complexMatch) {
+        complexMatch.forEach(m => {
+            const id = m.split(/[:%=]/).pop();
+            add(id, 'item');
+        });
     }
 
-    // Prioridade 2: Buscar id/item_id nos parâmetros diretos
-    try {
-        const urlObj = new URL(url.replace(/#.*$/, ''));
-        const itemIdFromQuery = urlObj.searchParams.get('item_id') || urlObj.searchParams.get('id');
-        if (itemIdFromQuery && itemIdFromQuery.match(/^MLB\d+$/i)) {
-            return { id: itemIdFromQuery.toUpperCase(), type: 'item' };
-        }
-    } catch (e) { }
+    // 2. Formato /p/MLB12345 (catálogo)
+    const pMatch = url.match(/\/p\/(MLB\d+|MLBU\d+)/i);
+    if (pMatch) add(pMatch[1], 'product');
 
-    // Prioridade 3: Formato /p/MLB12345 (catálogo)
-    const pMatch = url.match(/\/p\/MLB(\d+)/i);
-    if (pMatch) return { id: 'MLB' + pMatch[1], type: 'product' };
+    // 3. Qualquer outro padrão MLB/MLBU na URL
+    const generalMatch = url.match(/(MLB\d+|MLBU\d+)/gi);
+    if (generalMatch) {
+        generalMatch.forEach(id => add(id, 'item'));
+    }
 
-    // Prioridade 4: Formato MLB-12345 ou MLB12345 (item)
-    const match = url.match(/MLB[- ]?(\d+)/i);
-    if (!match) throw new Error('ID não encontrado na URL');
-    return { id: 'MLB' + match[1], type: 'item' };
+    if (ids.length === 0) throw new Error('Nenhum ID (MLB/MLBU) encontrado na URL');
+    return ids;
 }
 
 async function getAccessToken(clientId, clientSecret) {
@@ -141,74 +149,89 @@ function fetchItem(itemId, token, affiliateLink) {
  * Busca item via API pública (sem autenticação).
  * Funciona de qualquer IP — não é bloqueado como scraping HTML.
  */
-function fetchItemPublic(itemId, itemType, affiliateLink) {
+function fetchItemPublic(candidates, affiliateLink) {
     return new Promise((resolve, reject) => {
-        const tryEndpoint = (endpoint, isFallback) => {
-            console.log(`   📡 Chamando API Pública ${isFallback ? '(Fallback)' : ''}: ${endpoint.substring(0, 60)}...`);
-            https.get(endpoint, { headers: { 'Accept': 'application/json' } }, (res) => {
-                // Erro 404 → Tenta fallback para o outro tipo
-                if (res.statusCode === 404 && !isFallback) {
-                    const fallbackType = isFallback ? (itemType === 'item' ? 'product' : 'item') : (itemType === 'item' ? 'product' : 'item');
-                    const fallbackPath = fallbackType === 'product' ? `/products/${itemId}` : `/items/${itemId}`;
-                    return tryEndpoint(`https://api.mercadolibre.com${fallbackPath}`, true);
-                }
+        let index = 0;
 
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                    try {
-                        const item = JSON.parse(data);
+        const tryNext = () => {
+            if (index >= candidates.length) {
+                return reject(new Error('Nenhum ID resolveu dados válidos na API pública.'));
+            }
 
-                        // Se não tem título/nome, tenta fallback se ainda não for
-                        if (!item.title && !item.name) {
-                            if (!isFallback) {
-                                const fallbackType = itemType === 'item' ? 'product' : 'item';
-                                const fallbackPath = fallbackType === 'product' ? `/products/${itemId}` : `/items/${itemId}`;
-                                return tryEndpoint(`https://api.mercadolibre.com${fallbackPath}`, true);
-                            }
-                            return reject(new Error('Produto não identificado na API do M. Livre.'));
-                        }
+            const { id: itemId, type: itemType } = candidates[index];
+            index++;
 
-                        const title = item.title || item.name || 'Produto sem título';
-                        console.log(`   ✅ API pública retornou: ${title.substring(0, 40)}...`);
+            // Para cada ID, tentamos o tipo sugerido e o fallback (item vs product)
+            const tryEndpoint = (endpoint, isFallback) => {
+                console.log(`   📡 API Pública [${itemId}]: ${endpoint.substring(endpoint.lastIndexOf('/'))} ${isFallback ? '(Fallback)' : ''}`);
 
-                        // Unificar campos entre Items e Products
-                        const price = item.price || (item.buy_box_winner && item.buy_box_winner.price) || 0;
-                        const mainImage = item.pictures && item.pictures[0] ? (item.pictures[0].secure_url || item.pictures[0].url) :
-                            (item.thumbnail ? item.thumbnail.replace('-I.jpg', '-O.jpg') : '');
-
-                        resolve({
-                            id: itemId,
-                            title: title,
-                            price: price,
-                            originalPrice: item.original_price || price,
-                            discount: (item.original_price && item.original_price > price) ? Math.round((1 - price / item.original_price) * 100) : 0,
-                            image: mainImage,
-                            description: '',
-                            affiliateLink,
-                            freeShipping: item.shipping ? item.shipping.free_shipping : false
-                        });
-                    } catch (e) {
-                        if (!isFallback) {
-                            const fallbackType = itemType === 'item' ? 'product' : 'item';
-                            const fallbackPath = fallbackType === 'product' ? `/products/${itemId}` : `/items/${itemId}`;
-                            return tryEndpoint(`https://api.mercadolibre.com${fallbackPath}`, true);
-                        }
-                        else reject(new Error('Falha ao processar dados da API: ' + e.message));
+                https.get(endpoint, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
                     }
+                }, (res) => {
+                    if (res.statusCode !== 200) {
+                        if (!isFallback) {
+                            const other = endpoint.includes('/items/') ? `/products/${itemId}` : `/items/${itemId}`;
+                            return tryEndpoint(`https://api.mercadolibre.com${other}`, true);
+                        }
+                        return tryNext(); // Próximo ID da lista
+                    }
+
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => {
+                        try {
+                            const item = JSON.parse(data);
+                            if (!item.title && !item.name) {
+                                if (!isFallback) {
+                                    const other = endpoint.includes('/items/') ? `/products/${itemId}` : `/items/${itemId}`;
+                                    return tryEndpoint(`https://api.mercadolibre.com${other}`, true);
+                                }
+                                return tryNext();
+                            }
+
+                            const title = item.title || item.name;
+                            console.log(`   ✅ Sucesso com ${itemId}: ${title.substring(0, 30)}...`);
+
+                            const price = item.price || (item.buy_box_winner && item.buy_box_winner.price) || 0;
+                            const mainImage = item.pictures && item.pictures[0] ? (item.pictures[0].secure_url || item.pictures[0].url) :
+                                (item.thumbnail ? item.thumbnail.replace('-I.jpg', '-O.jpg') : '');
+
+                            resolve({
+                                id: itemId,
+                                title,
+                                price,
+                                originalPrice: item.original_price || price,
+                                discount: (item.original_price && item.original_price > price) ? Math.round((1 - price / item.original_price) * 100) : 0,
+                                image: mainImage,
+                                description: '',
+                                affiliateLink,
+                                freeShipping: item.shipping ? item.shipping.free_shipping : false
+                            });
+                        } catch (e) {
+                            if (!isFallback) {
+                                const other = endpoint.includes('/items/') ? `/products/${itemId}` : `/items/${itemId}`;
+                                return tryEndpoint(`https://api.mercadolibre.com${other}`, true);
+                            }
+                            tryNext();
+                        }
+                    });
+                }).on('error', () => {
+                    if (!isFallback) {
+                        const other = endpoint.includes('/items/') ? `/products/${itemId}` : `/items/${itemId}`;
+                        return tryEndpoint(`https://api.mercadolibre.com${other}`, true);
+                    }
+                    tryNext();
                 });
-            }).on('error', (e) => {
-                if (!isFallback) {
-                    const fallbackType = itemType === 'item' ? 'product' : 'item';
-                    const fallbackPath = fallbackType === 'product' ? `/products/${itemId}` : `/items/${itemId}`;
-                    return tryEndpoint(`https://api.mercadolibre.com${fallbackPath}`, true);
-                }
-                else reject(e);
-            });
+            };
+
+            const startPath = itemType === 'product' ? `/products/${itemId}` : `/items/${itemId}`;
+            tryEndpoint(`https://api.mercadolibre.com${startPath}`, false);
         };
 
-        const startPath = itemType === 'product' ? `/products/${itemId}` : `/items/${itemId}`;
-        tryEndpoint(`https://api.mercadolibre.com${startPath}`, false);
+        tryNext();
     });
 }
 
