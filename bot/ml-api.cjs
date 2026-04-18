@@ -8,21 +8,36 @@ const http = require('http');
 async function getProduct(url, clientId, clientSecret) {
     let productData = null;
 
-    // Tentar via API se houver credenciais (plano A)
+    // Tentar via API com credenciais (plano A)
     if (clientId && clientSecret) {
         try {
-            console.log('--- Tentando via API oficial...');
+            console.log('--- Tentando via API oficial (com credenciais)...');
             const accessToken = await getAccessToken(clientId, clientSecret);
             const itemId = extractId(url);
             productData = await fetchItem(itemId, accessToken, url);
         } catch (e) {
-            console.warn('⚠️ API falhou ou credenciais inválidas. Mudando para Plano B (Scraper)...');
+            console.warn('⚠️ API com credenciais falhou:', e.message);
         }
     }
 
-    // Plano B: Scraper (Extração de Metadados HTML)
+    // Plano B: API pública (sem auth — funciona de qualquer IP)
     if (!productData) {
-        productData = await scrapeProduct(url);
+        try {
+            console.log('--- Tentando via API pública (sem auth)...');
+            const itemId = extractId(url);
+            productData = await fetchItemPublic(itemId, url);
+        } catch (e) {
+            console.warn('⚠️ API pública falhou:', e.message);
+        }
+    }
+
+    // Plano C: Scraper HTML (último recurso)
+    if (!productData) {
+        try {
+            productData = await scrapeProduct(url);
+        } catch (e) {
+            console.warn('⚠️ Scraper HTML falhou:', e.message);
+        }
     }
 
     // Tentar buscar descrição se já temos o produto mas falta a descrição
@@ -96,6 +111,38 @@ function fetchItem(itemId, token, affiliateLink) {
                         freeShipping: item.shipping?.free_shipping || false
                     });
                 } catch { reject(new Error('Erro item sync')); }
+            });
+        }).on('error', reject);
+    });
+}
+
+/**
+ * Busca item via API pública (sem autenticação).
+ * Funciona de qualquer IP — não é bloqueado como scraping HTML.
+ */
+function fetchItemPublic(itemId, affiliateLink) {
+    return new Promise((resolve, reject) => {
+        const apiUrl = `https://api.mercadolibre.com/items/${itemId}`;
+        https.get(apiUrl, { headers: { 'Accept': 'application/json' } }, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const item = JSON.parse(data);
+                    if (item.error) return reject(new Error(item.message || 'Item não encontrado'));
+                    console.log(`   ✅ API pública retornou: ${item.title?.substring(0, 40)}...`);
+                    resolve({
+                        id: itemId,
+                        title: item.title,
+                        price: item.price || 0,
+                        originalPrice: item.original_price || item.price,
+                        discount: item.original_price > item.price ? Math.round((1 - item.price / item.original_price) * 100) : 0,
+                        image: item.pictures?.[0]?.secure_url || item.thumbnail?.replace('-I.jpg', '-O.jpg') || '',
+                        description: '',
+                        affiliateLink,
+                        freeShipping: item.shipping?.free_shipping || false
+                    });
+                } catch { reject(new Error('Erro parsing API pública')); }
             });
         }).on('error', reject);
     });
