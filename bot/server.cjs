@@ -174,13 +174,20 @@ const runAutomationTask = async () => {
     console.log('\n🤖 [Automation] Iniciando busca agendada de novos achados...');
     try {
         const query = 'Skincare Profissional';
-        const response = await axios.get(`https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(query)}&limit=10`);
+        const response = await axios.get(`https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(query)}&limit=15`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+            }
+        });
         const items = response.data.results;
+        console.log(`📡 [Automation] Encontrados ${items.length} itens. Sincronizando...`);
 
         for (const item of items) {
+            const price = item.price || 0;
             const product = {
                 title: item.title,
-                price: item.price.toString().replace('.', ','),
+                price: price.toString().replace('.', ','),
                 image_url: item.thumbnail.replace('-I.jpg', '-O.jpg'),
                 affiliate_link: item.permalink,
                 category: 'Beleza',
