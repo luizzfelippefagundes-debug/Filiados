@@ -108,7 +108,7 @@ const server = http.createServer(async (req, res) => {
                     .card { background: #1e293b; padding: 24px; border-radius: 16px; border: 1px solid #334155; text-align: center; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
                     p { font-size: 14px; opacity: 0.8; margin-bottom: 20px; color: #94a3b8; }
                     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-                    button { background: #334155; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; border: 1px solid transparent; }
+                    button { background: #334155; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; border: 1px solid transparent;    }
                     button:hover { background: #475569; border-color: #d4af37; color: #d4af37; }
                     h2 { color: #d4af37; margin: 0 0 8px 0; font-size: 20px; }
                 </style></head><body><div class="card">
@@ -182,7 +182,9 @@ const server = http.createServer(async (req, res) => {
 
     // Gatilho Manual de Automação
     if (req.method === 'POST' && req.url === '/run-automation') {
-        runAutomationTask(); // Executa em background
+        // Dispara ambos em background
+        syncCatalogPrices();
+        runAutomationTask();
         res.writeHead(200);
         res.end(JSON.stringify({ status: 'started' }));
         return;
@@ -199,50 +201,84 @@ const server = http.createServer(async (req, res) => {
 });
 
 /**
- * AUTOMAÇÃO NATIVA (Substitui o n8n para economia de memória)
+ * MOTOR DE SINCRONIZAÇÃO DE PREÇOS (Atualiza o que já existe)
+ */
+const syncCatalogPrices = async () => {
+    console.log('\n🔄 [Sync] Iniciando auditoria de preços do catálogo...');
+    try {
+        const { rows: products } = await pgClient.query('SELECT id, title, affiliate_link FROM products');
+        console.log(`📡 [Sync] Analisando ${products.length} produtos...`);
+
+        for (const p of products) {
+            try {
+                // Delay de 1s entre itens para evitar 429 (Too Many Requests)
+                await new Promise(r => setTimeout(r, 1000));
+
+                console.log(`   🔸 Verificando: ${p.title.substring(0, 30)}...`);
+                // Forçamos o uso do scraper para pegar o preço real mais atualizado
+                const updated = await offerService.extract(p.affiliate_link);
+
+                if (updated && updated.price) {
+                    const priceStr = updated.price.toString().replace('.', ',');
+                    await pgClient.query(
+                        'UPDATE products SET price = $1, original_price = $2, discount = $3 WHERE id = $4',
+                        [priceStr, updated.originalPrice?.toString().replace('.', ',') || priceStr, updated.discount || 0, p.id]
+                    );
+                }
+            } catch (err) {
+                console.warn(`   ⚠️ Erro ao atualizar ${p.id}: ${err.message}`);
+            }
+        }
+        console.log('✅ [Sync] Sincronização de preços concluída!');
+    } catch (error) {
+        console.error('💥 [Sync] Erro crítico no sync:', error.message);
+    }
+};
+
+/**
+ * AUTOMAÇÃO NATIVA (Substitui o n8n para descoberta de novos itens)
  */
 const runAutomationTask = async () => {
     console.log('\n🤖 [Automation] Iniciando busca agendada de novos achados...');
     try {
-        const query = 'Skincare Profissional';
-        const response = await axios.get(`https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(query)}&limit=15`, {
+        const query = 'Ofertas Dia Mercado Livre';
+        const response = await axios.get(`https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(query)}&limit=10`, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                 'Accept': 'application/json'
             }
         });
         const items = response.data.results;
-        console.log(`📡 [Automation] Encontrados ${items.length} itens. Sincronizando...`);
+        console.log(`📡 [Automation] Encontrados ${items.length} itens sugeridos.`);
 
         for (const item of items) {
-            const price = item.price || 0;
             const product = {
                 title: item.title,
-                price: price.toString().replace('.', ','),
-                image_url: item.thumbnail.replace('-I.jpg', '-O.jpg'),
-                affiliate_link: item.permalink,
-                category: 'Beleza',
-                description: `Oferta encontrada automaticamente: ${item.title}. Preço imbatível!`
+                price: item.price?.toString().replace('.', ',') || '0',
+                image: item.thumbnail,
+                description: 'Achado automático do sistema.',
+                affiliateLink: item.permalink,
+                category: 'Geral'
             };
 
-            const dbQuery = `
+            await pgClient.query(`
                 INSERT INTO products (title, price, image_url, affiliate_link, category, description)
                 VALUES ($1, $2, $3, $4, $5, $6)
-                ON CONFLICT (affiliate_link) DO UPDATE SET
-                    title = EXCLUDED.title,
-                    price = EXCLUDED.price
-                RETURNING title;
-            `;
-            const values = [product.title, product.price, product.image_url, product.affiliate_link, product.category, product.description];
-            await pgClient.query(dbQuery, values);
+                ON CONFLICT (affiliate_link) DO UPDATE SET price = EXCLUDED.price;
+            `, [product.title, product.price, product.image, product.affiliateLink, product.category, product.description]);
         }
-        console.log('✅ [Automation] Busca agendada concluída com sucesso.');
+        console.log('✅ [Automation] Buscas concluídas!');
     } catch (error) {
-        console.error('❌ [Automation] Erro na busca agendada:', error.message);
+        console.error('💥 [Automation] Erro na descoberta automática:', error.message);
     }
 };
 
-cron.schedule('0 */12 * * *', runAutomationTask);
+// Agendamentos (Cron)
+cron.schedule('0 0 * * *', runAutomationTask);     // Novos itens à meia-noite
+cron.schedule('0 */12 * * *', syncCatalogPrices); // Preços a cada 12h
+
+// Sync inicial opcional ao subir
+// syncCatalogPrices(); 
 
 const PORT = process.env.PORT || 3333;
 server.listen(PORT, '0.0.0.0', () => {
