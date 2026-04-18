@@ -318,13 +318,24 @@ const AdminPanel = ({ onClose, onRefresh }) => {
             <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
               <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2"><MousePointer2 size={16} className="text-gold" /> Gold Push</h3>
               <a href="javascript:(function(){ 
-                var t = document.querySelector('.ui-pdp-title')?.innerText || document.title.split('|')[0].trim();
-                var p = document.querySelector('.andes-money-amount__fraction')?.innerText || '0';
-                var i = document.querySelector('.ui-pdp-gallery__figure__image')?.src || document.querySelector('meta[property=\'og:image\']')?.content || '';
-                var url = encodeURIComponent(window.location.href);
-                var server = 'https://filiados.onrender.com';
-                var target = server + '/capture?format=html&url=' + url + '&title=' + encodeURIComponent(t) + '&price=' + encodeURIComponent(p) + '&image=' + encodeURIComponent(i);
-                window.open(target, 'GoldPush', 'width=500,height=400'); 
+                try {
+                  var t = (document.querySelector('.ui-pdp-title') || document.querySelector('h1'))?.innerText.trim() || document.title;
+                  var priceContainer = document.querySelector('.ui-pdp-price__second-line') || document.querySelector('.ui-pdp-price');
+                  if (!priceContainer) {
+                    var p = document.querySelector('meta[itemprop=\'price\']')?.content?.replace(\'.\', \',\') || \'0\';
+                  } else {
+                    var fraction = priceContainer.querySelector('.andes-money-amount__fraction')?.innerText.replace(/\\./g, \'\') || \'0\';
+                    var cents = priceContainer.querySelector('.andes-money-amount__cents')?.innerText || \'00\';
+                    var p = fraction + \',\' + cents;
+                  }
+                  var i = document.querySelector('.ui-pdp-gallery__figure__image')?.src || document.querySelector(\'meta[property=\'og:image\']\')?.content || \'\';
+                  var url = encodeURIComponent(window.location.href);
+                  var server = \'https://filiados.onrender.com\';
+                  var target = server + \'/capture?format=html&url=\' + url + \'&title=\' + encodeURIComponent(t) + \'&price=\' + encodeURIComponent(p) + \'&image=\' + encodeURIComponent(i);
+                  window.open(target, \'GoldPush\', \'width=500,height=400\'); 
+                } catch(e) {
+                  window.open(\'https://filiados.onrender.com/capture?format=html&url=\' + encodeURIComponent(window.location.href), \'GoldPush\', \'width=500,height=400\');
+                }
               })();" className="inline-block bg-gradient-gold text-gold-foreground px-5 py-2.5 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-gold hover:opacity-90 transition-smooth no-underline">🚀 Arraste para Favoritos</a>
             </div>
             <div className="bg-card rounded-2xl p-6 border border-border shadow-card text-center">
