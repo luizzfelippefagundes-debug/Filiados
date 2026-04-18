@@ -55,10 +55,18 @@ async function getProduct(url, clientId, clientSecret) {
 }
 
 function extractId(url) {
-    // Formato /p/MLB12345 (catálogo)
+    // Prioridade 1: Buscar item_id nos parâmetros (comum em /p/ catálogo)
+    const urlObj = new URL(url.replace(/#.*$/, ''));
+    const itemIdFromQuery = urlObj.searchParams.get('item_id') || urlObj.searchParams.get('id');
+    if (itemIdFromQuery && itemIdFromQuery.match(/^MLB\d+$/i)) {
+        return itemIdFromQuery.toUpperCase();
+    }
+
+    // Prioridade 2: Formato /p/MLB12345 (catálogo)
     const pMatch = url.match(/\/p\/MLB(\d+)/i);
     if (pMatch) return 'MLB' + pMatch[1];
-    // Formato MLB-12345 ou MLB12345 (item)
+
+    // Prioridade 3: Formato MLB-12345 ou MLB12345 (item)
     const match = url.match(/MLB[- ]?(\d+)/i);
     if (!match) throw new Error('ID não encontrado na URL');
     return 'MLB' + match[1];
