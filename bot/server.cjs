@@ -145,26 +145,27 @@ const server = http.createServer(async (req, res) => {
                     res.end(JSON.stringify({ error: error.message }));
                 }
             }
-            return;
         }
+        return;
+    }
 
-        // Gatilho Manual de Automação
-        if (req.method === 'POST' && req.url === '/run-automation') {
-            runAutomationTask(); // Executa em background
-            res.writeHead(200);
-            res.end(JSON.stringify({ status: 'started' }));
-            return;
-        }
+    // Gatilho Manual de Automação
+    if (req.method === 'POST' && req.url === '/run-automation') {
+        runAutomationTask(); // Executa em background
+        res.writeHead(200);
+        res.end(JSON.stringify({ status: 'started' }));
+        return;
+    }
 
-        // Health Check
-        if (req.url === '/health') {
-            res.writeHead(200); res.end('Gold Shop Bot is Healthy 🚀');
-            return;
-        }
+    // Health Check
+    if (req.url === '/health') {
+        res.writeHead(200); res.end('Gold Shop Bot is Healthy 🚀');
+        return;
+    }
 
-        res.writeHead(404);
-        res.end('Not Found');
-    });
+    res.writeHead(404);
+    res.end('Not Found');
+});
 
 /**
  * AUTOMAÇÃO NATIVA (Substitui o n8n para economia de memória)
